@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Celery</title>
+    <script>
+      // Apply persisted theme synchronously before any CSS or React runs,
+      // so the first paint matches the user's choice. The window itself is
+      // transparent (vibrancy sidebar); the opaque background is painted
+      // by the main pane only.
+      (function () {
+        try {
+          // Key must match THEME_STORAGE_KEY in renderer/hooks/useTheme.tsx.
+          var stored = localStorage.getItem("celery.theme") || "system";
+          var dark =
+            stored === "dark" ||
+            (stored === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          var html = document.documentElement;
+          if (dark) html.classList.add("dark");
+          html.style.colorScheme = dark ? "dark" : "light";
+        } catch (_) {
+          // localStorage may be unavailable in some contexts; render light.
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/renderer/index.tsx"></script>
+  </body>
+</html>
