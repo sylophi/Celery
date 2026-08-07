@@ -241,9 +241,6 @@
   background: transparent;
   --xy-attribution-background-color: transparent;
 }
-.react-flow__attribution a {
-  @apply text-muted-foreground/50;
-}
 .react-flow__edge-path {
   stroke: var(--edge-hard);
   stroke-width: 1;

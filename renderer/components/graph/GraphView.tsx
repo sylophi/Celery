@@ -598,6 +598,7 @@ function GraphViewInner({
       maxZoom={1.5}
       panOnScroll
       zoomOnPinch
+      proOptions={{ hideAttribution: true }}
       nodesDraggable={false}
       nodesConnectable={false}
       nodesFocusable={false}
