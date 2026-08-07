@@ -1,29 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Celery app icon: a dependency tree that silhouettes as a celery
-       bunch — three stalks converging into one shared base node, the
-       green "everything needs it" dependency. -->
+  <!-- Celery app icon: plump strawberry silhouette on a deep blue tile,
+       in the same soft single-glyph language as shigomori's tree
+       (rounded lobes, one off-white fill, no interior detail). -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#212121"/>
-      <stop offset="1" stop-color="#0c0c0c"/>
+      <stop offset="0" stop-color="#2b62ad"/>
+      <stop offset="1" stop-color="#12294f"/>
     </linearGradient>
   </defs>
   <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
 
-  <!-- branches (under the nodes) -->
-  <g stroke="#f2f2f0" stroke-width="48" stroke-linecap="round">
-    <line x1="512" y1="712" x2="298" y2="330"/>
-    <line x1="512" y1="712" x2="512" y2="278"/>
-    <line x1="512" y1="712" x2="726" y2="330"/>
+  <g fill="#f5f5f2">
+    <!-- leaf lobes: plain ovals, like the tree's circle lobes -->
+    <ellipse cx="512" cy="300" rx="56" ry="116"/>
+    <ellipse cx="410" cy="340" rx="52" ry="100" transform="rotate(-48 410 340)"/>
+    <ellipse cx="614" cy="340" rx="52" ry="100" transform="rotate(48 614 340)"/>
+    <!-- berry: rounded, gently tapered -->
+    <path d="M 512 828
+             C 394 766, 314 652, 314 528
+             C 314 416, 404 344, 512 344
+             C 620 344, 710 416, 710 528
+             C 710 652, 630 766, 512 828 Z"/>
   </g>
-
-  <!-- stalk-top nodes -->
-  <g fill="#f2f2f0">
-    <circle cx="298" cy="330" r="86"/>
-    <circle cx="512" cy="278" r="86"/>
-    <circle cx="726" cy="330" r="86"/>
-  </g>
-
-  <!-- the shared dependency -->
-  <circle cx="512" cy="712" r="94" fill="#31b578"/>
 </svg>
