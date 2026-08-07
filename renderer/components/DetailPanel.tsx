@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { DownloadIcon, FolderIcon, StarIcon, XIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  FolderIcon,
+  StarIcon,
+  TriangleAlertIcon,
+  XIcon,
+} from "lucide-react";
 import type {
   FolderState,
   Group,
@@ -21,6 +27,7 @@ import {
   useResolveMissing,
   useUpdateMod,
 } from "@/hooks/useRemote";
+import { ModIconGlyph, TagIconGlyph, tagsBeyondCategory } from "@/lib/modIcons";
 import { cn, formatBytes } from "@/lib/utils";
 
 function formatCount(n: number): string {
@@ -134,40 +141,11 @@ export function DetailPanel({
             <XIcon />
           </Button>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] ring-1 ring-border ring-inset",
-              file.enabled ? "text-foreground" : "text-muted-foreground",
-            )}
-          >
-            <span
-              className={cn(
-                "size-1.5 rounded-full",
-                file.enabled ? "bg-on" : "bg-muted-foreground/40",
-              )}
-            />
-            {file.enabled ? "enabled" : "disabled"}
-          </span>
-          {remoteStatus?.category !== undefined && (
-            <span className="rounded-md px-1.5 py-0.5 text-[10px] text-foreground/80 ring-1 ring-border ring-inset">
-              {remoteStatus.category}
-            </span>
-          )}
-          {file.tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-md px-1.5 py-0.5 text-[10px] text-muted-foreground ring-1 ring-border ring-inset"
-            >
-              {tag}
-            </span>
-          ))}
-          {orphan && (
-            <span className="rounded-md px-1.5 py-0.5 text-[10px] text-warn ring-1 ring-warn/40 ring-inset">
-              orphan
-            </span>
-          )}
-        </div>
+        <ModFacts
+          file={file}
+          category={remoteStatus?.category}
+          orphan={orphan}
+        />
         <div className="mt-2.5 flex items-center gap-1.5">
           <Button
             size="sm"
@@ -443,6 +421,64 @@ export function GhostPanel({
           ))}
         </Section>
       </div>
+    </div>
+  );
+}
+
+// The facts row under the title: enabled state, what the mod is (its
+// GameBanana category, icon-led), structural traits beyond that, and
+// warnings. Plain icon+word pairs instead of chip boxes.
+function ModFacts({
+  file,
+  category,
+  orphan,
+}: {
+  file: ModFile;
+  category: string | undefined;
+  orphan: boolean;
+}) {
+  const extraTags = tagsBeyondCategory(category, file.tags);
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px]">
+      <span
+        className={cn(
+          "inline-flex items-center gap-1",
+          file.enabled ? "text-foreground" : "text-muted-foreground",
+        )}
+      >
+        <span
+          className={cn(
+            "size-1.5 rounded-full",
+            file.enabled ? "bg-on" : "bg-muted-foreground/40",
+          )}
+        />
+        {file.enabled ? "enabled" : "disabled"}
+      </span>
+      {category !== undefined && (
+        <span className="inline-flex items-center gap-1 text-foreground/80">
+          <ModIconGlyph
+            category={category}
+            tags={file.tags}
+            className="size-3"
+          />
+          {category}
+        </span>
+      )}
+      {extraTags.map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex items-center gap-1 text-muted-foreground"
+        >
+          <TagIconGlyph tag={tag} className="size-3" />
+          {tag}
+        </span>
+      ))}
+      {orphan && (
+        <span className="inline-flex items-center gap-1 text-warn">
+          <TriangleAlertIcon aria-hidden className="size-3" />
+          orphan
+        </span>
+      )}
     </div>
   );
 }

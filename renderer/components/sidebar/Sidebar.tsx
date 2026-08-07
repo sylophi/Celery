@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useSaveFolderState, useSetFavorite } from "@/hooks/useMods";
 import { useRemoteOverview } from "@/hooks/useRemote";
+import { ModIconGlyph } from "@/lib/modIcons";
 import { cn, dragRegion } from "@/lib/utils";
 
 const isMac = window.api.platform === "darwin";
@@ -42,6 +43,8 @@ export function Sidebar({
       .filter(([, status]) => status.updateAvailable)
       .map(([fileName]) => fileName),
   );
+  const categoryOf = (fileName: string) =>
+    overview.data?.byFile[fileName]?.category;
   const matches = query
     ? files.filter(
         (file) =>
@@ -109,6 +112,7 @@ export function Sidebar({
               selectedId={selectedId}
               orphans={orphans}
               updates={updates}
+              categoryOf={categoryOf}
               onSelect={onSelect}
             />
             <ModSection
@@ -118,6 +122,7 @@ export function Sidebar({
               selectedId={selectedId}
               orphans={orphans}
               updates={updates}
+              categoryOf={categoryOf}
               onSelect={onSelect}
             />
             {topLevel.length === 0 && depended.length === 0 && (
@@ -161,6 +166,7 @@ function ModSection({
   selectedId,
   orphans,
   updates,
+  categoryOf,
   onSelect,
 }: {
   label: string;
@@ -169,6 +175,7 @@ function ModSection({
   selectedId: string | null;
   orphans: Set<string>;
   updates: Set<string>;
+  categoryOf: (fileName: string) => string | undefined;
   onSelect: (fileName: string) => void;
 }) {
   if (files.length === 0) return null;
@@ -191,6 +198,7 @@ function ModSection({
             selected={file.fileName === selectedId}
             orphan={orphans.has(file.fileName)}
             updateAvailable={updates.has(file.fileName)}
+            category={categoryOf(file.fileName)}
             onSelect={onSelect}
           />
         ))}
@@ -205,6 +213,7 @@ function ModRow({
   selected,
   orphan,
   updateAvailable,
+  category,
   onSelect,
 }: {
   file: ModFile;
@@ -212,6 +221,7 @@ function ModRow({
   selected: boolean;
   orphan: boolean;
   updateAvailable: boolean;
+  category: string | undefined;
   onSelect: (fileName: string) => void;
 }) {
   const setFavorite = useSetFavorite();
@@ -234,6 +244,17 @@ function ModRow({
           "size-1.5 shrink-0 rounded-full",
           file.enabled ? "bg-on" : "bg-muted-foreground/30",
         )}
+      />
+      <ModIconGlyph
+        category={category}
+        tags={file.tags}
+        className={cn(
+          "size-3 shrink-0",
+          hasDependents
+            ? "text-muted-foreground/50"
+            : "text-muted-foreground/70",
+        )}
+        {...(category !== undefined ? { title: category } : {})}
       />
       <span
         className={cn(
