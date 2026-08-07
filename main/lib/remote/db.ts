@@ -51,7 +51,7 @@ export async function updateDb(): Promise<Map<string, UpdateEntry> | null> {
   if (typeof raw === "object" && raw !== null) {
     for (const [name, value] of Object.entries(raw)) {
       const parsed = UpdateEntrySchema.safeParse(value);
-      // Individual malformed entries are skipped, not fatal — one odd
+      // Individual malformed entries are skipped, not fatal: one odd
       // mod upstream must not take out update checking for everything.
       if (parsed.success) map.set(name, parsed.data);
     }
@@ -89,7 +89,7 @@ export type RemoteDeps = { name: string; version: string }[];
 
 let depGraphMemo: Memo<Map<string, RemoteDeps>> = null;
 
-// The full GameBanana dependency graph — used to make missing-dep
+// The full GameBanana dependency graph, used to make missing-dep
 // installs transitive (a missing dep's own deps may be missing too).
 export async function depGraph(): Promise<Map<string, RemoteDeps> | null> {
   const body = await fetchCached(

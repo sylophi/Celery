@@ -121,8 +121,8 @@ export function DetailPanel({
               {displayName(file.fileName)}
             </div>
             <div className="tabular mt-0.5 truncate text-[10px] text-muted-foreground/70">
-              {file.fileName} · {formatBytes(file.sizeBytes)}
-              {version ? ` · v${version}` : ""}
+              {file.fileName}, {formatBytes(file.sizeBytes)}
+              {version ? `, v${version}` : ""}
             </div>
           </div>
           <Button
@@ -256,7 +256,8 @@ export function DetailPanel({
           <MissingSection missing={missing} progress={progress} />
         )}
         <Section
-          label={`needs · ${hardDeps.length}`}
+          label="needs"
+          count={hardDeps.length}
           empty="needs nothing beyond Everest"
         >
           {hardDeps.map((dep) => (
@@ -269,7 +270,7 @@ export function DetailPanel({
           ))}
         </Section>
         {optionalDeps.length > 0 && (
-          <Section label={`optionally uses · ${optionalDeps.length}`}>
+          <Section label="optionally uses" count={optionalDeps.length}>
             {optionalDeps.map((dep) => (
               <DepRow
                 key={dep}
@@ -281,7 +282,8 @@ export function DetailPanel({
           </Section>
         )}
         <Section
-          label={`needed by · ${dependents.length}`}
+          label="needed by"
+          count={dependents.length}
           empty="nothing depends on this"
         >
           {dependents.map((dep) => (
@@ -295,7 +297,8 @@ export function DetailPanel({
         </Section>
         {optionalDependents.length > 0 && (
           <Section
-            label={`optionally needed by · ${optionalDependents.length}`}
+            label="optionally needed by"
+            count={optionalDependents.length}
           >
             {optionalDependents.map((dep) => (
               <DepRow
@@ -429,7 +432,7 @@ export function GhostPanel({
             if (names.includes(name)) onClose();
           }}
         />
-        <Section label={`needed by · ${neededBy.length}`}>
+        <Section label="needed by" count={neededBy.length}>
           {neededBy.map((dep) => (
             <DepRow
               key={dep}
@@ -446,10 +449,12 @@ export function GhostPanel({
 
 function Section({
   label,
+  count,
   empty,
   children,
 }: {
   label: string;
+  count?: number;
   empty?: string;
   children: React.ReactNode;
 }) {
@@ -458,8 +463,13 @@ function Section({
     : Boolean(children);
   return (
     <div className="mb-3">
-      <h3 className="mb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-        {label}
+      <h3 className="mb-1 flex items-baseline justify-between text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+        <span>{label}</span>
+        {count !== undefined && (
+          <span className="tabular font-normal text-muted-foreground/60">
+            {count}
+          </span>
+        )}
       </h3>
       {hasChildren ? (
         <ul className="-mx-1.5">{children}</ul>
@@ -557,7 +567,7 @@ function ProgressBar({
 }
 
 // Missing dependencies, enriched by the remote database: each name is
-// resolved to a version/size (transitively — a missing dep's own
+// resolved to a version/size (transitively: a missing dep's own
 // missing deps join the plan) and installable in one click.
 function MissingSection({
   missing,
@@ -581,8 +591,11 @@ function MissingSection({
   const failed = install.data?.failed ?? [];
   return (
     <div className="mb-3">
-      <h3 className="mb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-        missing dependencies · {rows.length}
+      <h3 className="mb-1 flex items-baseline justify-between text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+        <span>missing dependencies</span>
+        <span className="tabular font-normal text-muted-foreground/60">
+          {rows.length}
+        </span>
       </h3>
       <ul className="-mx-1.5">
         {rows.map((step) => {
@@ -606,7 +619,7 @@ function MissingSection({
               </div>
               {steps && !step.installable && (
                 <p className="text-[10px] text-muted-foreground/60">
-                  not in the mod database — install manually
+                  not in the mod database, install manually
                 </p>
               )}
               {p?.phase === "downloading" && (
@@ -644,7 +657,7 @@ function MissingSection({
           <DownloadIcon className="size-3.5" />
           {install.isPending
             ? "installing…"
-            : `install ${installable.length === 1 ? "it" : `all ${installable.length}`}${totalBytes > 0 ? ` · ${formatBytes(totalBytes)}` : ""}`}
+            : `install ${installable.length === 1 ? "it" : `all ${installable.length}`}${totalBytes > 0 ? ` (${formatBytes(totalBytes)})` : ""}`}
         </Button>
       )}
       {failed.length > 0 && (

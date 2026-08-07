@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Data derived from maddie480's Everest update database — the same
+// Data derived from maddie480's Everest update database, the same
 // backend Olympus and the in-game updater use. Everything here is
 // best-effort: the app must stay fully usable when offline, so remote
 // lookups degrade to "unknown" rather than erroring.
@@ -23,7 +23,7 @@ export type RemoteFileStatus = z.infer<typeof RemoteFileStatusSchema>;
 
 export const RemoteOverviewSchema = z.object({
   // False when the database could not be fetched and no cached copy
-  // exists — the UI should show nothing remote rather than zeros.
+  // exists; the UI should show nothing remote rather than zeros.
   available: z.boolean(),
   fetchedAt: z.number().nullable(),
   byFile: z.record(z.string(), RemoteFileStatusSchema),

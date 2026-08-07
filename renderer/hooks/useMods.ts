@@ -20,7 +20,7 @@ export function useMods() {
   });
 }
 
-// Plain derivation — React Compiler memoizes it on `snapshot` identity.
+// Plain derivation. React Compiler memoizes it on `snapshot` identity.
 export function useModIndex(snapshot: ModsSnapshot | undefined) {
   return snapshot ? buildIndex(snapshot) : null;
 }
@@ -61,7 +61,7 @@ export function useFolderState(folder: string | undefined) {
 }
 
 // Mutations take an UPDATER over the freshest cached state, not a
-// snapshot: building the payload from a component prop races — a second
+// snapshot: building the payload from a component prop races. A second
 // click before the first write's refetch lands would clobber it, and a
 // click before the initial load would wipe the file with EMPTY state.
 export function useSaveFolderState(folder: string | undefined) {

@@ -77,8 +77,8 @@ export function App() {
   const orphans = index ? new Set(findOrphans(index)) : new Set<string>();
 
   // Which mods count as "dependencies" (vs top-level mods you play):
-  // hard dependents only — a mod that is merely optionally referenced
-  // stays top-level — with per-mod user overrides on top.
+  // hard dependents only (a mod that is merely optionally referenced
+  // stays top-level), with per-mod user overrides on top.
   const dependencySet = new Set<string>();
   for (const file of index?.files ?? []) {
     const byDefault = (index?.dependents.get(file.fileName)?.size ?? 0) > 0;
@@ -135,8 +135,8 @@ export function App() {
   // Dependency-aware toggling. Enabling pulls in the disabled part of
   // the hard-dep closure. Disabling a single mod takes its enabled
   // dependents down too; disabling a group keeps members an enabled
-  // outsider still needs. Cascades apply immediately by default — the
-  // status pill reports what happened — unless the confirm-cascades
+  // outsider still needs. Cascades apply immediately by default (the
+  // status pill reports what happened) unless the confirm-cascades
   // setting routes them through the preview dialog first.
   const requestToggle = (
     fileNames: string[],
@@ -199,7 +199,7 @@ export function App() {
     }
     const message =
       plan.kept.length > 0
-        ? `disabled ${label} · kept ${plan.kept.length} shared`
+        ? `disabled ${label}, kept ${plan.kept.length} shared`
         : `disabled ${label}`;
     run(
       plan.targets.map((fileName) => ({ fileName, enabled: false })),
@@ -208,7 +208,7 @@ export function App() {
         title: "some mods stay on",
         sections: [
           {
-            label: "kept on — still needed by enabled mods outside the group",
+            label: "kept on: still needed by enabled mods outside the group",
             items: plan.kept,
           },
         ],
@@ -301,7 +301,7 @@ export function App() {
                 />
               </div>
               <span className="tabular text-xs text-muted-foreground/70">
-                {totalCount} mods · {enabledCount} enabled
+                {totalCount} mods, {enabledCount} enabled
               </span>
               <div className="flex-1" />
               <div
@@ -315,7 +315,7 @@ export function App() {
                   title="rescan mods folder"
                   disabled={modsQuery.isFetching}
                   onClick={() => {
-                    // Files may have changed under us — update-badge
+                    // Files may have changed under us, and update-badge
                     // state depends on their hashes, so refresh both.
                     void queryClient.invalidateQueries({
                       queryKey: queryKeys.mods,

@@ -20,7 +20,7 @@ export const ModEntrySchema = z.object({
 });
 export type ModEntry = z.infer<typeof ModEntrySchema>;
 
-// Structural tags derived from zip contents — local metadata carries no
+// Structural tags derived from zip contents: local metadata carries no
 // categories, but the archive layout reveals what a mod is.
 export const StructuralTagSchema = z.enum([
   "helper", // has a DLL, ships no maps: a code library
@@ -32,7 +32,7 @@ export const StructuralTagSchema = z.enum([
 ]);
 export type StructuralTag = z.infer<typeof StructuralTagSchema>;
 
-// One archive in the Mods folder — the unit Everest's txt files operate
+// One archive in the Mods folder, the unit Everest's txt files operate
 // on. `fileName` (e.g. "FrostHelper.zip") is the identity everywhere;
 // mod Names map onto files via their entries.
 export const ModFileSchema = z.object({
@@ -43,7 +43,7 @@ export const ModFileSchema = z.object({
   favorite: z.boolean(),
   entries: z.array(ModEntrySchema),
   tags: z.array(StructuralTagSchema),
-  // XXH64 of the whole zip, lowercase hex — the identity Everest's
+  // XXH64 of the whole zip, lowercase hex: the identity Everest's
   // update database tracks. Absent when hashing failed (locked file).
   xxHash: z.string().optional(),
   // Set when the archive had no parseable manifest; such files still

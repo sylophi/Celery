@@ -37,7 +37,7 @@ function buildFeedUrl(): string | null {
 
 export function checkForUpdates(): void {
   if (!started) return;
-  // No-op once an update is ready — the only useful action left is install.
+  // No-op once an update is ready; the only useful action left is install.
   if (state.kind === "ready" || state.kind === "downloading") return;
   setState({ kind: "checking" });
   try {

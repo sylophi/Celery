@@ -154,7 +154,7 @@ export const remoteHandlers: Handlers<typeof remoteContract, HandlerContext> = {
         );
         let fileName = installFileName(name);
         // If a zip by that name already exists it is NOT this mod
-        // (the mod is missing) — pick a fresh name, never overwrite.
+        // (the mod is missing), so pick a fresh name, never overwrite.
         // oxlint-disable-next-line no-await-in-loop
         const exists = await stat(path.join(folder, fileName)).then(
           () => true,

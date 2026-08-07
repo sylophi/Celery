@@ -32,7 +32,7 @@ async function readMeta(key: string): Promise<CacheMeta | null> {
       return parsed as CacheMeta;
     }
   } catch {
-    // Missing or corrupt meta — treat as uncached.
+    // Missing or corrupt meta: treat as uncached.
   }
   return null;
 }
@@ -70,7 +70,7 @@ async function readBody(key: string): Promise<Buffer | null> {
 // cached copy is returned without network I/O. Past the TTL the server
 // is revalidated; on any network failure a stale copy is still
 // returned. Returns null only when there is no cached copy and the
-// fetch failed — callers treat that as "remote unavailable".
+// fetch failed; callers treat that as "remote unavailable".
 export async function fetchCached(
   key: string,
   url: string,

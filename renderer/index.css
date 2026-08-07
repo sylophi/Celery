@@ -44,14 +44,14 @@
      (node dot, sidebar dot, group meter): green reads as "loaded" at a
      glance, and it's celery. */
   --on: oklch(0.66 0.15 155);
-  /* Hard dependency edges: deliberately faint — with collab mods
+  /* Hard dependency edges: deliberately faint. With collab mods
      declaring 50-100 deps each the edge mass must read as texture,
      with full contrast reserved for the selected neighborhood. */
   --edge-hard: oklch(0.85 0 0);
   /* Optional dependency edges: one step weaker + dashed in the view;
      hierarchy by weight, like songloupe's grid weak/mid/strong. */
   --edge-optional: oklch(0.92 0 0);
-  /* Edges touching the selected node: strong but not full-contrast —
+  /* Edges touching the selected node: strong but not full-contrast;
      a 50-edge fan at foreground strength reads as a black smear. */
   --edge-active: oklch(0.5 0 0);
   /* Orphan badge: amber = advisory, distinct from destructive (missing
@@ -204,7 +204,7 @@
   }
 }
 
-/* Status pill: visible, hold, then fade — fully CSS-driven so the
+/* Status pill: visible, hold, then fade. Fully CSS-driven so the
    component needs no timers or effect state. */
 @keyframes status-pill-fade {
   0%,
@@ -260,7 +260,7 @@
   stroke-width: 1.5;
 }
 .react-flow__handle {
-  /* Handles are layout anchors only — never interactive targets. */
+  /* Handles are layout anchors only, never interactive targets. */
   opacity: 0;
   pointer-events: none;
 }

@@ -6,7 +6,7 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 //
 // blacklist.txt semantics (inverted, matching the in-game generator):
 // every mod file is listed; DISABLED mods are plain lines, ENABLED mods
-// are commented out with "# ". A file absent from the list is enabled —
+// are commented out with "# ". A file absent from the list is enabled;
 // Everest only skips what it reads uncommented.
 
 const BLACKLIST = "blacklist.txt";
@@ -23,7 +23,7 @@ const FAVORITES_HEADER = [
 ];
 const HEADER_PREFIXES = ["# This is the blacklist", "# File generated through"];
 
-// Uncommented, non-blank lines — the only thing Everest itself reads.
+// Uncommented, non-blank lines: the only thing Everest itself reads.
 function activeLines(text: string): string[] {
   return text
     .split(/\r?\n/)
@@ -31,8 +31,8 @@ function activeLines(text: string): string[] {
     .filter((line) => line.length > 0 && !line.startsWith("#"));
 }
 
-// ENOENT means "no state yet" and reads as empty. Anything else — a
-// locked file, a permissions hiccup — must fail the operation loudly:
+// ENOENT means "no state yet" and reads as empty. Anything else (a
+// locked file, a permissions hiccup) must fail the operation loudly:
 // treating it as empty would let a later full-file rewrite wipe the
 // user's real state.
 async function readFileOrNull(filePath: string): Promise<string | null> {
@@ -60,7 +60,7 @@ async function writeAtomic(filePath: string, content: string): Promise<void> {
     // EACCES: a read-only directory forbids creating the tmp file even
     // when the txt file itself is writable. EPERM: Windows refusing to
     // rename over a file the running game holds open. Both fall back to
-    // an in-place write — Everest writes these files directly too.
+    // an in-place write; Everest writes these files directly too.
     if (code !== "EACCES" && code !== "EPERM") throw error;
     await writeFile(filePath, content, "utf8");
   }

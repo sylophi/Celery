@@ -30,7 +30,7 @@ export const ghostName = (id: string): string => id.slice(GHOST_PREFIX.length);
 // undirected) become separate clusters. Inside each, every root mod is
 // a BLOCK: the root on top with the dependencies only it reaches
 // stacked beneath, while dependencies shared between roots form a
-// common foundation of depth bands below all blocks — so the only
+// common foundation of depth bands below all blocks, so the only
 // long edges are the genuinely shared ones. Blocks order by how much
 // foundation they use (heavy sharers sink next to it). Clusters pack
 // largest-first; singletons form a compact strip. Missing deps join as
@@ -60,7 +60,7 @@ function layoutPositions(
 ): Map<string, NodePos> {
   // Union of hard+optional dependency edges restricted to the visible
   // set, plus the reverse map. STRUCTURE (blocks, ownership, depth
-  // bands) follows hard edges only — an optional reference must not
+  // bands) follows hard edges only: an optional reference must not
   // swallow a whole subtree into one root's block (StrawberryJam is not
   // "part of" BreezeContest because a Breeze sub-mod optionally uses
   // it). This also makes graph roots line up with the sidebar's "mods"
@@ -147,11 +147,11 @@ function layoutPositions(
   // Lay out each component into a local (0,0)-anchored box.
   //
   // Inside a component, ownership grouping: each root (nothing depends
-  // on it — a collab, a map, a standalone tool) becomes a BLOCK with
+  // on it: a collab, a map, a standalone tool) becomes a BLOCK with
   // its EXCLUSIVE dependencies (reached from that root only) stacked
   // directly beneath it, so those edges stay short and local. Only
   // dependencies shared by two or more roots go to a common foundation
-  // laid out in depth bands under all the blocks — the only edges that
+  // laid out in depth bands under all the blocks, so the only edges that
   // travel are the genuinely shared ones.
   type Cluster = {
     positions: Map<string, NodePos>;
@@ -435,7 +435,7 @@ function GraphViewInner({
     selectedId && isGhostId(selectedId)
       ? ghostDependents.has(selectedId)
         ? new Set([selectedId, ...ghostDependents.get(selectedId)!])
-        : null // ghost vanished (e.g. just installed) — no dimming
+        : null // ghost vanished (e.g. just installed), so no dimming
       : selectedId && visible.has(selectedId)
         ? new Set([
             ...depClosure(index, [selectedId]),
@@ -514,7 +514,7 @@ function GraphViewInner({
     for (const [from, deps] of index.hardDeps) {
       for (const to of deps) push(from, to, false);
     }
-    // Optional-dep edges only appear around the selected node — drawn
+    // Optional-dep edges only appear around the selected node; drawn
     // for everything they add more crosshatch than information.
     if (selectedId) {
       for (const [from, deps] of index.optionalDeps) {
@@ -523,7 +523,7 @@ function GraphViewInner({
         }
       }
     }
-    // Edges into ghost nodes: dashed destructive, always drawn — a
+    // Edges into ghost nodes: dashed destructive, always drawn, since a
     // missing dep is a problem worth the ink.
     for (const [ghost, dependents] of ghostDependents) {
       for (const from of dependents) {
@@ -557,7 +557,7 @@ function GraphViewInner({
   const { setCenter, getZoom, fitView } = useReactFlow();
 
   // Refit when the visible set changes shape (filter switch, folder
-  // change) — the initial fitView only covers mount.
+  // change); the initial fitView only covers mount.
   const nodesInitialized = useNodesInitialized();
   const lastFitKey = useRef("");
   useEffect(() => {

@@ -1,6 +1,6 @@
 // Pure dependency-graph derivation over a ModsSnapshot. Used by both
-// the renderer (graph view, cascade previews) and main (nothing yet) —
-// no Electron or DOM imports allowed here.
+// the renderer (graph view, cascade previews) and main (nothing yet),
+// so no Electron or DOM imports allowed here.
 import type { ModFile, ModsSnapshot } from "./schemas/mods";
 
 // The loader and the game appear as dependencies but are not files in
@@ -14,7 +14,7 @@ export type ModIndex = {
   // (multi-entry manifests); a name maps to exactly one file.
   providerOf: Map<string, string>;
   // fileName -> fileNames it hard-depends on (resolved, deduped, no
-  // self-edges — a sub-mod depending on its own parent zip collapses).
+  // self-edges: a sub-mod depending on its own parent zip collapses).
   hardDeps: Map<string, Set<string>>;
   optionalDeps: Map<string, Set<string>>;
   // Reverse hard edges: fileName -> fileNames that hard-depend on it.
@@ -40,7 +40,7 @@ export function buildIndex(snapshot: ModsSnapshot): ModIndex {
         continue;
       }
       // Duplicate providers (two zips shipping the same mod Name):
-      // prefer the enabled copy — that's the one Everest actually
+      // prefer the enabled copy. That's the one Everest actually
       // loads, so edges, cascades, and orphan detection should bind
       // to it rather than to whichever sorts first.
       const existingFile = byFileName.get(existing)!;
@@ -154,7 +154,7 @@ export function planEnable(index: ModIndex, fileNames: string[]): EnablePlan {
 export type DisablePlan = {
   targets: string[];
   // Enabled mods (outside the targets) that hard-depend, transitively,
-  // on something being disabled — they'd break unless disabled too.
+  // on something being disabled; they'd break unless disabled too.
   brokenDependents: string[];
   // Group semantics: members that stay enabled because an enabled mod
   // outside the group still needs them.
@@ -174,8 +174,8 @@ export function planDisable(index: ModIndex, fileNames: string[]): DisablePlan {
   const kept = [...requested].filter((f) => needed.has(f)).toSorted();
   const targets = [...requested].filter((f) => !needed.has(f)).toSorted();
   // Anything enabled outside the request that depends on a target is
-  // broken. (Only reachable when the caller ignores `kept` — a forced
-  // disable — but computed so the UI can warn either way.)
+  // broken. (Only reachable when the caller ignores `kept`, a forced
+  // disable, but computed so the UI can warn either way.)
   const brokenDependents = [...dependentClosure(index, targets)]
     .filter((f) => !requested.has(f))
     .filter((f) => index.byFileName.get(f)?.enabled === true)
@@ -184,7 +184,7 @@ export function planDisable(index: ModIndex, fileNames: string[]): DisablePlan {
 }
 
 // ENABLED support-material files (helpers, asset packs, audio) that no
-// other enabled mod references — Everest loads them for nothing. This
+// other enabled mod references: Everest loads them for nothing. This
 // is deliberately relative to the enabled set, not the installed set:
 // a disabled collab "using" a helper doesn't justify the helper being
 // loaded. Favorites are excluded: a starred mod is kept on purpose.

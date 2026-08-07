@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 export type Status = { text: string; kind: "ok" | "error"; nonce: number };
 
 // Quiet status feedback instead of toasts: a single aria-live pill,
-// bottom-right, that self-dismisses. The fade-out is pure CSS — the
+// bottom-right, that self-dismisses. The fade-out is pure CSS: the
 // keyed animation restarts whenever a new status lands (nonce breaks
 // ties for repeated identical messages). Write failures render here in
 // destructive colors so a failed toggle is never silent.

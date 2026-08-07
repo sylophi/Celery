@@ -1,6 +1,6 @@
 # Project-local pnpm settings, mirroring shigomori's hardening.
 #
-# nodeLinker: hoisted — required by electron-forge so it can crawl a
+# nodeLinker: hoisted, required by electron-forge so it can crawl a
 # flat node_modules tree when packaging.
 nodeLinker: hoisted
 # Allowance for the @electron/node-gyp transitive dep
@@ -14,7 +14,7 @@ trustPolicy: no-downgrade
 # electron-forge's legacy dep tree (semver@5/6, execa@1-era chains)
 # predates provenance attestation, and no-downgrade flags every such
 # version. Rather than enumerate them, skip downgrade checks for
-# versions already public for a year+ — takeover risk concentrates in
+# versions already public for a year+: takeover risk concentrates in
 # fresh publishes, which stay fully checked (and delayed 7 days by
 # minimumReleaseAge above).
 trustPolicyIgnoreAfter: 525600

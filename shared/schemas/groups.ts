@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // A group is stored intent: "these mods belong to an activity" (e.g.
 // multiplayer, skins, a collab playthrough). Toggling a group computes
-// the dependency closure at apply time — nothing derived is persisted.
+// the dependency closure at apply time; nothing derived is persisted.
 // Members are zip file names, the togglable unit.
 export const GroupSchema = z.object({
   id: z.string(),
@@ -15,7 +15,7 @@ export const GroupListSchema = z.array(GroupSchema);
 
 // Where a mod lives in the sidebar: "mod" (top-level) or "dependency".
 // The default comes from the graph (hard dependents > 0 → dependency);
-// an override pins a mod to the other section — e.g. a tool that is
+// an override pins a mod to the other section, e.g. a tool that is
 // only referenced optionally, or a helper the user plays directly.
 export const SectionSchema = z.enum(["mod", "dependency"]);
 export type Section = z.infer<typeof SectionSchema>;

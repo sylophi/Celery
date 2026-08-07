@@ -34,7 +34,7 @@ export function readJsonFileSync<S extends z.ZodTypeAny>(
 }
 
 // Strict variant for read-modify-write flows: only a missing file reads
-// as the fallback. Corrupt JSON or a schema mismatch throws — degrading
+// as the fallback. Corrupt JSON or a schema mismatch throws, since degrading
 // to the fallback there would make the subsequent write silently
 // discard everything else the file held.
 export async function readJsonFileStrict<S extends z.ZodTypeAny>(

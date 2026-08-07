@@ -1,4 +1,4 @@
-// Preload script — runs in an isolated context with access to Node +
+// Preload script. Runs in an isolated context with access to Node +
 // Electron APIs. Exposes a typed `window.api` to the renderer.
 import { contextBridge } from "electron";
 import {

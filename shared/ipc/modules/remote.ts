@@ -34,7 +34,7 @@ export const remoteContract = {
     InstallResultSchema,
   ),
   // Replaces an installed zip with the database's latest build, same
-  // fileName — blacklist/favorites entries stay valid untouched.
+  // fileName, so blacklist/favorites entries stay valid untouched.
   update: invoke("remote:update", z.object({ fileName: z.string() }), z.void()),
   progress: broadcast("remote:progress", RemoteProgressSchema),
 } as const;

@@ -8,7 +8,7 @@ export type ModNodeData = {
   file: ModFile;
   orphan: boolean;
   missing: number;
-  // True when something depends on this mod — dependencies render as
+  // True when something depends on this mod: dependencies render as
   // compact pills, distinct from the card shape of top-level mods.
   hasDependents: boolean;
 };

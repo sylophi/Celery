@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import xxhashInit from "xxhash-wasm";
 
-// XXH64 (seed 0) of a whole file, streamed — the hash Everest's update
+// XXH64 (seed 0) of a whole file, streamed: the hash Everest's update
 // database keys on, so local zips can be matched against it without
 // trusting version strings. WASM instantiation happens once.
 

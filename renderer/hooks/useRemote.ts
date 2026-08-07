@@ -53,7 +53,7 @@ export function useInstallMods() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (names: string[]) => window.api.remote.install(names),
-    // Files changed on disk regardless of per-mod failures — resync.
+    // Files changed on disk regardless of per-mod failures, so resync.
     onSettled: () => invalidateAfterFilesChanged(queryClient),
   });
 }

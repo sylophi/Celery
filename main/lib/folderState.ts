@@ -22,7 +22,7 @@ export async function writeFolderState(
   state: FolderState,
 ): Promise<void> {
   // Strict read: a corrupt state file must fail this write, not be
-  // treated as empty — the rewrite would drop every other folder.
+  // treated as empty: the rewrite would drop every other folder.
   const data = await readJsonFileStrict(STATE_FILE, FileSchema, EMPTY);
   await writeJsonFile(STATE_FILE, {
     byFolder: { ...data.byFolder, [folder]: state },
