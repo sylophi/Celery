@@ -10,8 +10,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ConfirmDialog, type PendingAction } from "@/components/ConfirmDialog";
-import { DetailPanel } from "@/components/DetailPanel";
-import { GraphView } from "@/components/graph/GraphView";
+import { DetailPanel, GhostPanel } from "@/components/DetailPanel";
+import { ghostName, GraphView, isGhostId } from "@/components/graph/GraphView";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { StatusPill, type Status } from "@/components/StatusPill";
@@ -219,6 +219,8 @@ export function App() {
 
   const selectedFile =
     selectedId && index ? (index.byFileName.get(selectedId) ?? null) : null;
+  const selectedGhost =
+    selectedId && isGhostId(selectedId) ? ghostName(selectedId) : null;
   const enabledCount =
     modsQuery.data?.files.filter((f) => f.enabled).length ?? 0;
   const totalCount = modsQuery.data?.files.length ?? 0;
@@ -312,11 +314,16 @@ export function App() {
                   aria-label="rescan mods folder"
                   title="rescan mods folder"
                   disabled={modsQuery.isFetching}
-                  onClick={() =>
+                  onClick={() => {
+                    // Files may have changed under us — update-badge
+                    // state depends on their hashes, so refresh both.
                     void queryClient.invalidateQueries({
                       queryKey: queryKeys.mods,
-                    })
-                  }
+                    });
+                    void queryClient.invalidateQueries({
+                      queryKey: queryKeys.remoteOverview,
+                    });
+                  }}
                 >
                   <RefreshCwIcon
                     className={
@@ -369,6 +376,14 @@ export function App() {
                     onSelect={setSelectedId}
                   />
                 )
+              )}
+              {selectedGhost && index && (
+                <GhostPanel
+                  name={selectedGhost}
+                  index={index}
+                  onSelect={setSelectedId}
+                  onClose={() => setSelectedId(null)}
+                />
               )}
               {selectedFile && index && (
                 <DetailPanel

@@ -3,6 +3,7 @@ import { configContract } from "@shared/ipc/modules/config";
 import { dialogContract } from "@shared/ipc/modules/dialog";
 import { folderStateContract } from "@shared/ipc/modules/folderState";
 import { modsContract } from "@shared/ipc/modules/mods";
+import { remoteContract } from "@shared/ipc/modules/remote";
 import { runtimeContract } from "@shared/ipc/modules/runtime";
 import { shellContract } from "@shared/ipc/modules/shell";
 import { updaterContract } from "@shared/ipc/modules/updater";
@@ -12,6 +13,7 @@ const configClient = buildClient(configContract);
 const dialogClient = buildClient(dialogContract);
 const folderStateClient = buildClient(folderStateContract);
 const modsClient = buildClient(modsContract);
+const remoteClient = buildClient(remoteContract);
 const runtimeClient = buildClient(runtimeContract);
 const shellClient = buildClient(shellContract);
 const updaterClient = buildClient(updaterContract);
@@ -38,6 +40,15 @@ export const mods = {
     modsClient.setEnabled({ changes }),
   setFavorite: (fileName: string, favorite: boolean) =>
     modsClient.setFavorite({ fileName, favorite }),
+} as const;
+
+export const remote = {
+  overview: remoteClient.overview,
+  modInfo: (name: string) => remoteClient.modInfo({ name }),
+  resolveMissing: (names: string[]) => remoteClient.resolveMissing({ names }),
+  install: (names: string[]) => remoteClient.install({ names }),
+  update: (fileName: string) => remoteClient.update({ fileName }),
+  onProgress: remoteClient.progress,
 } as const;
 
 export const runtime = {

@@ -14,17 +14,27 @@ import type { ModIndex } from "@shared/graph";
 import { depClosure, dependentClosure } from "@shared/graph";
 import type { GraphFilter } from "@/App";
 import { displayName } from "@/App";
+import { GhostNode, type GhostFlowNode } from "./GhostNode";
 import { ModNode, nodeHeight, nodeWidth, type ModFlowNode } from "./ModNode";
 
-const nodeTypes = { mod: ModNode };
+const nodeTypes = { mod: ModNode, ghost: GhostNode };
+type AnyFlowNode = ModFlowNode | GhostFlowNode;
 
-// Cluster-per-component layout. Each connected component of the
-// dependency graph (hard+optional edges, undirected) is laid out as its
-// own banded cluster — depth bands inside the cluster, nodes wrapping
-// into rows, barycenter-ordered so dependencies sit under their users.
-// Clusters then pack left-to-right, largest first, so unrelated islands
-// (a collab and its helpers vs. a lone skin mod) never interleave;
-// single-node components gather into a compact strip at the end.
+// Missing dependencies appear as ghost nodes. Their ids live in the
+// same string space as fileNames, namespaced by this prefix.
+export const GHOST_PREFIX = "missing:";
+export const isGhostId = (id: string): boolean => id.startsWith(GHOST_PREFIX);
+export const ghostName = (id: string): string => id.slice(GHOST_PREFIX.length);
+
+// Ownership layout. Connected components (hard+optional edges,
+// undirected) become separate clusters. Inside each, every root mod is
+// a BLOCK: the root on top with the dependencies only it reaches
+// stacked beneath, while dependencies shared between roots form a
+// common foundation of depth bands below all blocks — so the only
+// long edges are the genuinely shared ones. Blocks order by how much
+// foundation they use (heavy sharers sink next to it). Clusters pack
+// largest-first; singletons form a compact strip. Missing deps join as
+// dashed ghost nodes wherever their dependents put them.
 const BAND_MAX_WIDTH = 1700;
 const SLOT_GAP_X = 14;
 const ROW_GAP_Y = 16;
@@ -43,6 +53,10 @@ function layoutPositions(
   index: ModIndex,
   visible: Set<string>,
   dependencySet: Set<string>,
+  // fileName -> ghost ids of its missing deps. Ghosts join the layout
+  // as ordinary dependency-shaped nodes: an exclusive missing dep sits
+  // inside its dependent's block, a shared one in the foundation.
+  ghostDeps: Map<string, string[]>,
 ): Map<string, NodePos> {
   // Union of hard+optional dependency edges restricted to the visible
   // set, plus the reverse map. STRUCTURE (blocks, ownership, depth
@@ -56,10 +70,15 @@ function layoutPositions(
   // Optional edges still count for component GROUPING, so optionally-
   // linked blocks land in the same cluster, near each other.
   const unionNeighbors = new Map<string, Set<string>>();
+  const allGhosts = new Set<string>();
   for (const fileName of visible) {
     const deps = new Set<string>();
     for (const to of index.hardDeps.get(fileName) ?? []) {
       if (visible.has(to)) deps.add(to);
+    }
+    for (const ghost of ghostDeps.get(fileName) ?? []) {
+      deps.add(ghost);
+      allGhosts.add(ghost);
     }
     depsOf.set(fileName, deps);
     const neighbors = new Set<string>(deps);
@@ -73,6 +92,7 @@ function layoutPositions(
       set.add(fileName);
     }
   }
+  for (const ghost of allGhosts) depsOf.set(ghost, new Set());
   for (const [from, neighbors] of unionNeighbors) {
     for (const to of neighbors) {
       let set = unionNeighbors.get(to);
@@ -122,6 +142,7 @@ function layoutPositions(
     return depth;
   };
   for (const fileName of visible) depthOf(fileName);
+  for (const ghost of allGhosts) depthOf(ghost);
 
   // Lay out each component into a local (0,0)-anchored box.
   //
@@ -139,10 +160,16 @@ function layoutPositions(
     size: number;
   };
 
-  const dims = (fileName: string) => {
-    const isDependency = dependencySet.has(fileName);
+  const dims = (id: string) => {
+    if (isGhostId(id)) {
+      return {
+        width: nodeWidth(ghostName(id), true),
+        height: nodeHeight(true),
+      };
+    }
+    const isDependency = dependencySet.has(id);
     return {
-      width: nodeWidth(displayName(fileName), isDependency),
+      width: nodeWidth(displayName(id), isDependency),
       height: nodeHeight(isDependency),
     };
   };
@@ -380,7 +407,24 @@ function GraphViewInner({
     ).map((f) => f.fileName),
   );
 
-  const positions = layoutPositions(index, visible, dependencySet);
+  // Missing dependencies of visible mods become ghost nodes, keyed by
+  // the missing Name (several mods missing the same dep share one).
+  const ghostDeps = new Map<string, string[]>();
+  const ghostDependents = new Map<string, string[]>();
+  for (const file of index.files) {
+    if (!visible.has(file.fileName)) continue;
+    for (const name of new Set(index.missing.get(file.fileName) ?? [])) {
+      const id = GHOST_PREFIX + name;
+      let deps = ghostDeps.get(file.fileName);
+      if (!deps) ghostDeps.set(file.fileName, (deps = []));
+      deps.push(id);
+      let dependents = ghostDependents.get(id);
+      if (!dependents) ghostDependents.set(id, (dependents = []));
+      dependents.push(file.fileName);
+    }
+  }
+
+  const positions = layoutPositions(index, visible, dependencySet, ghostDeps);
 
   // The selected node's neighborhood: everything it transitively needs
   // plus everything that transitively needs it.
@@ -388,17 +432,22 @@ function GraphViewInner({
   // edges are drawn as active around the selection, so the nodes they
   // point at must not be dimmed out from under them.
   const neighborhood =
-    selectedId && visible.has(selectedId)
-      ? new Set([
-          ...depClosure(index, [selectedId]),
-          ...dependentClosure(index, [selectedId]),
-          ...(index.optionalDeps.get(selectedId) ?? []),
-          ...(index.optionalDependents.get(selectedId) ?? []),
-        ])
-      : null;
+    selectedId && isGhostId(selectedId)
+      ? ghostDependents.has(selectedId)
+        ? new Set([selectedId, ...ghostDependents.get(selectedId)!])
+        : null // ghost vanished (e.g. just installed) — no dimming
+      : selectedId && visible.has(selectedId)
+        ? new Set([
+            ...depClosure(index, [selectedId]),
+            ...dependentClosure(index, [selectedId]),
+            ...(index.optionalDeps.get(selectedId) ?? []),
+            ...(index.optionalDependents.get(selectedId) ?? []),
+            ...(ghostDeps.get(selectedId) ?? []),
+          ])
+        : null;
 
-  const nodes: ModFlowNode[] = (() => {
-    const out: ModFlowNode[] = [];
+  const nodes: AnyFlowNode[] = (() => {
+    const out: AnyFlowNode[] = [];
     for (const file of index.files) {
       if (!visible.has(file.fileName)) continue;
       const pos = positions.get(file.fileName)!;
@@ -419,6 +468,22 @@ function GraphViewInner({
           missing: index.missing.get(file.fileName)?.length ?? 0,
           hasDependents: dependencySet.has(file.fileName),
         },
+      });
+    }
+    for (const [id, dependents] of ghostDependents) {
+      const pos = positions.get(id);
+      if (!pos) continue;
+      const dimmed =
+        (neighborhood && !neighborhood.has(id)) || filter === "orphans";
+      out.push({
+        id,
+        type: "ghost",
+        position: { x: pos.x, y: pos.y },
+        width: pos.width,
+        height: pos.height,
+        selected: id === selectedId,
+        style: { opacity: dimmed ? 0.25 : 1 },
+        data: { name: ghostName(id), neededBy: dependents.length },
       });
     }
     return out;
@@ -456,6 +521,30 @@ function GraphViewInner({
         for (const to of deps) {
           if (from === selectedId || to === selectedId) push(from, to, true);
         }
+      }
+    }
+    // Edges into ghost nodes: dashed destructive, always drawn — a
+    // missing dep is a problem worth the ink.
+    for (const [ghost, dependents] of ghostDependents) {
+      for (const from of dependents) {
+        const active =
+          selectedId !== null && (from === selectedId || ghost === selectedId);
+        const dimmed =
+          (neighborhood &&
+            !(neighborhood.has(from) && neighborhood.has(ghost))) ||
+          filter === "orphans";
+        out.push({
+          id: `m:${from}->${ghost}`,
+          source: from,
+          target: ghost,
+          className: ["edge-missing", active && "edge-active"]
+            .filter(Boolean)
+            .join(" "),
+          style: dimmed ? { opacity: 0.12 } : undefined,
+          markerEnd: active
+            ? { type: MarkerType.ArrowClosed, width: 14, height: 14 }
+            : undefined,
+        });
       }
     }
     return out;

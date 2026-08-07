@@ -6,6 +6,7 @@ import { displayName } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useSaveFolderState, useSetFavorite } from "@/hooks/useMods";
+import { useRemoteOverview } from "@/hooks/useRemote";
 import { cn, dragRegion } from "@/lib/utils";
 
 const isMac = window.api.platform === "darwin";
@@ -35,6 +36,12 @@ export function Sidebar({
 }) {
   const [search, setSearch] = useState("");
   const query = search.trim().toLowerCase();
+  const overview = useRemoteOverview(Boolean(folder));
+  const updates = new Set(
+    Object.entries(overview.data?.byFile ?? {})
+      .filter(([, status]) => status.updateAvailable)
+      .map(([fileName]) => fileName),
+  );
   const matches = query
     ? files.filter(
         (file) =>
@@ -101,6 +108,7 @@ export function Sidebar({
               hasDependents={false}
               selectedId={selectedId}
               orphans={orphans}
+              updates={updates}
               onSelect={onSelect}
             />
             <ModSection
@@ -109,6 +117,7 @@ export function Sidebar({
               hasDependents
               selectedId={selectedId}
               orphans={orphans}
+              updates={updates}
               onSelect={onSelect}
             />
             {topLevel.length === 0 && depended.length === 0 && (
@@ -124,6 +133,14 @@ export function Sidebar({
         <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground/60">
           {folder ? folder : "no folder yet"}
         </span>
+        {updates.size > 0 && (
+          <span
+            className="tabular shrink-0 text-[10px] text-muted-foreground"
+            title="newer builds exist on GameBanana"
+          >
+            {updates.size} updates
+          </span>
+        )}
         {orphans.size > 0 && (
           <span
             className="tabular shrink-0 text-[10px] text-warn"
@@ -143,6 +160,7 @@ function ModSection({
   hasDependents,
   selectedId,
   orphans,
+  updates,
   onSelect,
 }: {
   label: string;
@@ -150,6 +168,7 @@ function ModSection({
   hasDependents: boolean;
   selectedId: string | null;
   orphans: Set<string>;
+  updates: Set<string>;
   onSelect: (fileName: string) => void;
 }) {
   if (files.length === 0) return null;
@@ -171,6 +190,7 @@ function ModSection({
             hasDependents={hasDependents}
             selected={file.fileName === selectedId}
             orphan={orphans.has(file.fileName)}
+            updateAvailable={updates.has(file.fileName)}
             onSelect={onSelect}
           />
         ))}
@@ -184,12 +204,14 @@ function ModRow({
   hasDependents,
   selected,
   orphan,
+  updateAvailable,
   onSelect,
 }: {
   file: ModFile;
   hasDependents: boolean;
   selected: boolean;
   orphan: boolean;
+  updateAvailable: boolean;
   onSelect: (fileName: string) => void;
 }) {
   const setFavorite = useSetFavorite();
@@ -221,6 +243,13 @@ function ModRow({
       >
         {displayName(file.fileName)}
       </span>
+      {updateAvailable && (
+        <span
+          aria-hidden
+          title="update available"
+          className="relative size-1 shrink-0 rounded-full bg-ring"
+        />
+      )}
       {orphan && (
         <span
           aria-hidden

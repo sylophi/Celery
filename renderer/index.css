@@ -252,6 +252,12 @@
   stroke: var(--edge-optional);
   stroke-dasharray: 4 3;
 }
+.react-flow__edge.edge-missing .react-flow__edge-path {
+  /* Edge into a missing (ghost) dependency: dashed, quietly alarming. */
+  stroke: var(--destructive);
+  stroke-dasharray: 4 3;
+  opacity: 0.55;
+}
 .react-flow__edge.edge-active .react-flow__edge-path {
   stroke: var(--edge-active);
   stroke-width: 1.5;

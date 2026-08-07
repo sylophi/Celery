@@ -1,8 +1,11 @@
-import { FolderIcon, StarIcon, XIcon } from "lucide-react";
+import { useState } from "react";
+import { DownloadIcon, FolderIcon, StarIcon, XIcon } from "lucide-react";
 import type {
   FolderState,
   Group,
   ModFile,
+  RemoteModInfo,
+  RemoteProgress,
   Section as ModSection,
 } from "@shared/schemas";
 import type { ModIndex } from "@shared/graph";
@@ -10,7 +13,21 @@ import { displayName } from "@/App";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useSaveFolderState, useSetFavorite } from "@/hooks/useMods";
+import {
+  useInstallMods,
+  useRemoteModInfo,
+  useRemoteOverview,
+  useRemoteProgress,
+  useResolveMissing,
+  useUpdateMod,
+} from "@/hooks/useRemote";
 import { cn, formatBytes } from "@/lib/utils";
+
+function formatCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}k`;
+  return String(n);
+}
 
 export function DetailPanel({
   file,
@@ -36,6 +53,19 @@ export function DetailPanel({
   const setFavorite = useSetFavorite();
   const saveState = useSaveFolderState(folder);
   const groups = folderState.groups;
+
+  const overview = useRemoteOverview();
+  const remoteStatus = overview.data?.byFile[file.fileName];
+  const remoteInfo = useRemoteModInfo(
+    remoteStatus?.name ?? file.entries[0]?.name,
+  );
+  const updateMod = useUpdateMod();
+  const progress = useRemoteProgress();
+  const updateProgress = remoteStatus
+    ? progress.get(remoteStatus.name)
+    : undefined;
+  const updating =
+    updateMod.isPending || updateProgress?.phase === "downloading";
 
   const hardDeps = [...(index.hardDeps.get(file.fileName) ?? [])].toSorted();
   const optionalDeps = [
@@ -119,6 +149,11 @@ export function DetailPanel({
             />
             {file.enabled ? "enabled" : "disabled"}
           </span>
+          {remoteStatus?.category !== undefined && (
+            <span className="rounded-md px-1.5 py-0.5 text-[10px] text-foreground/80 ring-1 ring-border ring-inset">
+              {remoteStatus.category}
+            </span>
+          )}
           {file.tags.map((tag) => (
             <span
               key={tag}
@@ -172,22 +207,53 @@ export function DetailPanel({
             <FolderIcon className="size-3.5" />
           </Button>
         </div>
+        {remoteStatus?.updateAvailable && (
+          <div className="mt-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              disabled={updating}
+              onClick={() => updateMod.mutate(file.fileName)}
+            >
+              <DownloadIcon className="size-3.5" />
+              {updating
+                ? "updating…"
+                : `update to ${remoteStatus.latestVersion}`}
+            </Button>
+            {updateProgress?.phase === "downloading" && (
+              <ProgressBar
+                receivedBytes={updateProgress.receivedBytes}
+                totalBytes={updateProgress.totalBytes}
+              />
+            )}
+            {(updateMod.isError || updateProgress?.phase === "error") && (
+              <p className="mt-1 text-[10px] text-destructive">
+                update failed:{" "}
+                {updateProgress?.error ??
+                  (updateMod.error instanceof Error
+                    ? updateMod.error.message
+                    : "unknown error")}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        {remoteInfo.data && (
+          <RemoteInfoSection
+            info={remoteInfo.data}
+            latestVersion={remoteStatus?.latestVersion}
+          />
+        )}
         {file.parseError && (
           <p className="mb-3 text-xs text-destructive">
             manifest problem: {file.parseError}
           </p>
         )}
         {missing.length > 0 && (
-          <Section label="missing dependencies">
-            {missing.map((name) => (
-              <li key={name} className="px-1.5 py-1 text-xs text-destructive">
-                {name}
-              </li>
-            ))}
-          </Section>
+          <MissingSection missing={missing} progress={progress} />
         )}
         <Section
           label={`needs · ${hardDeps.length}`}
@@ -314,6 +380,70 @@ export function DetailPanel({
   );
 }
 
+// Panel for a selected ghost node: a dependency that installed mods
+// need but which isn't in the Mods folder. Offers the install flow and
+// lists who needs it.
+export function GhostPanel({
+  name,
+  index,
+  onSelect,
+  onClose,
+}: {
+  name: string;
+  index: ModIndex;
+  onSelect: (fileName: string) => void;
+  onClose: () => void;
+}) {
+  const progress = useRemoteProgress();
+  const neededBy = index.files
+    .filter((f) => (index.missing.get(f.fileName) ?? []).includes(name))
+    .map((f) => f.fileName)
+    .toSorted();
+  return (
+    <div className="absolute inset-y-3 right-3 z-40 flex w-72 flex-col overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-floating">
+      <div className="shrink-0 border-b border-border p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="truncate text-sm font-medium">{name}</div>
+            <div className="mt-0.5 text-[10px] text-destructive">
+              not installed
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            aria-label="close"
+            onClick={onClose}
+          >
+            <XIcon />
+          </Button>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        <MissingSection
+          missing={[name]}
+          progress={progress}
+          // Once this ghost is installed it stops existing as a node;
+          // close rather than leave a panel about nothing selected.
+          onInstalled={(names) => {
+            if (names.includes(name)) onClose();
+          }}
+        />
+        <Section label={`needed by · ${neededBy.length}`}>
+          {neededBy.map((dep) => (
+            <DepRow
+              key={dep}
+              fileName={dep}
+              index={index}
+              onSelect={onSelect}
+            />
+          ))}
+        </Section>
+      </div>
+    </div>
+  );
+}
+
 function Section({
   label,
   empty,
@@ -335,6 +465,194 @@ function Section({
         <ul className="-mx-1.5">{children}</ul>
       ) : (
         empty && <p className="text-xs text-muted-foreground/60">{empty}</p>
+      )}
+    </div>
+  );
+}
+
+// Screenshot with a graceful ladder: the original full-resolution
+// image first (the mirror only stores 220px thumbnails), the mirrored
+// copy when GameBanana's CDN fails, hidden when both do.
+function Screenshot({
+  shot,
+  title,
+}: {
+  shot: { mirror?: string; original: string };
+  title: string;
+}) {
+  const [stage, setStage] = useState<"original" | "mirror" | "hidden">(
+    "original",
+  );
+  if (stage === "hidden") return null;
+  return (
+    <img
+      src={stage === "mirror" ? shot.mirror : shot.original}
+      alt={`${title} screenshot`}
+      loading="lazy"
+      className="aspect-video w-full rounded-lg border border-border object-cover"
+      onError={() =>
+        setStage(
+          stage === "original" && shot.mirror !== undefined
+            ? "mirror"
+            : "hidden",
+        )
+      }
+    />
+  );
+}
+
+function RemoteInfoSection({
+  info,
+  latestVersion,
+}: {
+  info: RemoteModInfo;
+  latestVersion: string | undefined;
+}) {
+  const shot = info.screenshots[0];
+  return (
+    <div className="mb-3">
+      {shot && <Screenshot shot={shot} title={info.title} />}
+      {info.description && (
+        <p className="mt-2 text-xs leading-snug text-muted-foreground">
+          {info.description}
+        </p>
+      )}
+      <div className="tabular mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground/70">
+        {info.author && <span className="truncate">by {info.author}</span>}
+        <span>{formatCount(info.downloads)} downloads</span>
+        <span>{formatCount(info.likes)} likes</span>
+        {latestVersion !== undefined && <span>latest v{latestVersion}</span>}
+        <button
+          type="button"
+          onClick={() => void window.api.shell.openExternal(info.pageUrl)}
+          className="cursor-pointer text-muted-foreground underline-offset-2 outline-none hover:underline focus-visible:underline"
+        >
+          GameBanana ↗
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProgressBar({
+  receivedBytes,
+  totalBytes,
+}: {
+  receivedBytes: number;
+  totalBytes: number;
+}) {
+  const pct =
+    totalBytes > 0 ? Math.min(100, (receivedBytes / totalBytes) * 100) : null;
+  return (
+    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">
+      <div
+        className={cn(
+          "h-full rounded-full bg-primary transition-[width] duration-200",
+          pct === null && "animate-pulse",
+        )}
+        style={{ width: `${pct ?? 100}%` }}
+      />
+    </div>
+  );
+}
+
+// Missing dependencies, enriched by the remote database: each name is
+// resolved to a version/size (transitively — a missing dep's own
+// missing deps join the plan) and installable in one click.
+function MissingSection({
+  missing,
+  progress,
+  onInstalled,
+}: {
+  missing: string[];
+  progress: Map<string, RemoteProgress>;
+  onInstalled?: (names: string[]) => void;
+}) {
+  const plan = useResolveMissing(missing);
+  const install = useInstallMods();
+  const steps = plan.data?.steps;
+  const rows =
+    steps ?? missing.map((name) => ({ name, installable: false }) as const);
+  const installable = (steps ?? []).filter((s) => s.installable);
+  const totalBytes = installable.reduce(
+    (sum, s) => sum + ("sizeBytes" in s ? (s.sizeBytes ?? 0) : 0),
+    0,
+  );
+  const failed = install.data?.failed ?? [];
+  return (
+    <div className="mb-3">
+      <h3 className="mb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+        missing dependencies · {rows.length}
+      </h3>
+      <ul className="-mx-1.5">
+        {rows.map((step) => {
+          const p = progress.get(step.name);
+          return (
+            <li key={step.name} className="px-1.5 py-1 text-xs">
+              <div className="flex items-baseline gap-1.5">
+                <span className="min-w-0 flex-1 truncate text-destructive">
+                  {step.name}
+                </span>
+                {"version" in step && step.version !== undefined && (
+                  <span className="tabular shrink-0 text-[10px] text-muted-foreground/60">
+                    v{step.version}
+                  </span>
+                )}
+                {"sizeBytes" in step && step.sizeBytes !== undefined && (
+                  <span className="tabular shrink-0 text-[10px] text-muted-foreground/60">
+                    {formatBytes(step.sizeBytes)}
+                  </span>
+                )}
+              </div>
+              {steps && !step.installable && (
+                <p className="text-[10px] text-muted-foreground/60">
+                  not in the mod database — install manually
+                </p>
+              )}
+              {p?.phase === "downloading" && (
+                <ProgressBar
+                  receivedBytes={p.receivedBytes}
+                  totalBytes={p.totalBytes}
+                />
+              )}
+              {p?.phase === "error" && (
+                <p className="text-[10px] text-destructive">{p.error}</p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {installable.length > 0 && (
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-1.5 w-full"
+          disabled={install.isPending}
+          onClick={() =>
+            install.mutate(
+              installable.map((s) => s.name),
+              {
+                onSuccess: (result) => {
+                  if (result.installed.length > 0) {
+                    onInstalled?.(result.installed);
+                  }
+                },
+              },
+            )
+          }
+        >
+          <DownloadIcon className="size-3.5" />
+          {install.isPending
+            ? "installing…"
+            : `install ${installable.length === 1 ? "it" : `all ${installable.length}`}${totalBytes > 0 ? ` · ${formatBytes(totalBytes)}` : ""}`}
+        </Button>
+      )}
+      {failed.length > 0 && (
+        <p className="mt-1 text-[10px] text-destructive">
+          {failed.length === 1
+            ? `${failed[0]!.name} failed: ${failed[0]!.error}`
+            : `${failed.length} installs failed`}
+        </p>
       )}
     </div>
   );

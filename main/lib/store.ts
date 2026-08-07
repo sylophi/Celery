@@ -52,12 +52,16 @@ export async function readJsonFileStrict<S extends z.ZodTypeAny>(
   return schema.parse(JSON.parse(raw));
 }
 
+// Unique per write: concurrent writers of the same file (e.g. two IPC
+// handlers scanning at once) must not rename each other's tmp away.
+let tmpCounter = 0;
+
 export async function writeJsonFile(
   name: string,
   value: unknown,
 ): Promise<void> {
   const target = path.join(celeryRoot(), name);
-  const tmp = `${target}.tmp`;
+  const tmp = `${target}.${process.pid}.${tmpCounter++}.tmp`;
   await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
   await rename(tmp, target);
 }

@@ -43,6 +43,9 @@ export const ModFileSchema = z.object({
   favorite: z.boolean(),
   entries: z.array(ModEntrySchema),
   tags: z.array(StructuralTagSchema),
+  // XXH64 of the whole zip, lowercase hex — the identity Everest's
+  // update database tracks. Absent when hashing failed (locked file).
+  xxHash: z.string().optional(),
   // Set when the archive had no parseable manifest; such files still
   // show up (Everest loads them) but contribute no graph edges.
   parseError: z.string().optional(),
