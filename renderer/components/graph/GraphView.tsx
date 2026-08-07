@@ -6,6 +6,7 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useNodesInitialized,
   useReactFlow,
   type Edge,
 } from "@xyflow/react";
@@ -35,28 +36,48 @@ const PACK_MAX_WIDTH = 3200;
 
 type NodePos = { x: number; y: number; width: number; height: number };
 
+const byName = (a: string, b: string) =>
+  a.toLowerCase().localeCompare(b.toLowerCase());
+
 function layoutPositions(
   index: ModIndex,
   visible: Set<string>,
   dependencySet: Set<string>,
 ): Map<string, NodePos> {
   // Union of hard+optional dependency edges restricted to the visible
-  // set, plus the reverse map.
+  // set, plus the reverse map. STRUCTURE (blocks, ownership, depth
+  // bands) follows hard edges only — an optional reference must not
+  // swallow a whole subtree into one root's block (StrawberryJam is not
+  // "part of" BreezeContest because a Breeze sub-mod optionally uses
+  // it). This also makes graph roots line up with the sidebar's "mods"
+  // section, which classifies by hard dependents.
   const depsOf = new Map<string, Set<string>>();
   const dependentsOf = new Map<string, Set<string>>();
+  // Optional edges still count for component GROUPING, so optionally-
+  // linked blocks land in the same cluster, near each other.
+  const unionNeighbors = new Map<string, Set<string>>();
   for (const fileName of visible) {
     const deps = new Set<string>();
     for (const to of index.hardDeps.get(fileName) ?? []) {
       if (visible.has(to)) deps.add(to);
     }
-    for (const to of index.optionalDeps.get(fileName) ?? []) {
-      if (visible.has(to)) deps.add(to);
-    }
     depsOf.set(fileName, deps);
+    const neighbors = new Set<string>(deps);
+    for (const to of index.optionalDeps.get(fileName) ?? []) {
+      if (visible.has(to)) neighbors.add(to);
+    }
+    unionNeighbors.set(fileName, neighbors);
     for (const to of deps) {
       let set = dependentsOf.get(to);
       if (!set) dependentsOf.set(to, (set = new Set()));
       set.add(fileName);
+    }
+  }
+  for (const [from, neighbors] of unionNeighbors) {
+    for (const to of neighbors) {
+      let set = unionNeighbors.get(to);
+      if (!set) unionNeighbors.set(to, (set = new Set()));
+      set.add(from);
     }
   }
 
@@ -72,10 +93,7 @@ function layoutPositions(
     while (queue.length > 0) {
       const current = queue.pop()!;
       nodes.push(current);
-      for (const neighbor of [
-        ...(depsOf.get(current) ?? []),
-        ...(dependentsOf.get(current) ?? []),
-      ]) {
+      for (const neighbor of unionNeighbors.get(current) ?? []) {
         if (!componentOf.has(neighbor)) {
           componentOf.set(neighbor, id);
           queue.push(neighbor);
@@ -106,27 +124,171 @@ function layoutPositions(
   for (const fileName of visible) depthOf(fileName);
 
   // Lay out each component into a local (0,0)-anchored box.
+  //
+  // Inside a component, ownership grouping: each root (nothing depends
+  // on it — a collab, a map, a standalone tool) becomes a BLOCK with
+  // its EXCLUSIVE dependencies (reached from that root only) stacked
+  // directly beneath it, so those edges stay short and local. Only
+  // dependencies shared by two or more roots go to a common foundation
+  // laid out in depth bands under all the blocks — the only edges that
+  // travel are the genuinely shared ones.
   type Cluster = {
     positions: Map<string, NodePos>;
     width: number;
     height: number;
     size: number;
   };
-  const clusters: Cluster[] = components.map((nodes) => {
-    const bands: string[][] = [];
-    for (const fileName of nodes) {
-      (bands[depths.get(fileName) ?? 0] ??= []).push(fileName);
+
+  const dims = (fileName: string) => {
+    const isDependency = dependencySet.has(fileName);
+    return {
+      width: nodeWidth(displayName(fileName), isDependency),
+      height: nodeHeight(isDependency),
+    };
+  };
+  // Flow `items` into wrapped rows anchored at (0, startY); returns the
+  // bounding box. Items are placed in the given order.
+  const flowRows = (
+    positions: Map<string, NodePos>,
+    items: string[],
+    startY: number,
+    wrapWidth: number,
+  ): { width: number; bottom: number } => {
+    let x = 0;
+    let y = startY;
+    let rowHeight = 0;
+    let width = 0;
+    for (const fileName of items) {
+      const d = dims(fileName);
+      if (x > 0 && x + d.width > wrapWidth) {
+        x = 0;
+        y += rowHeight + ROW_GAP_Y;
+        rowHeight = 0;
+      }
+      positions.set(fileName, { x, y, width: d.width, height: d.height });
+      width = Math.max(width, x + d.width);
+      rowHeight = Math.max(rowHeight, d.height);
+      x += d.width + SLOT_GAP_X;
     }
+    return { width, bottom: items.length > 0 ? y + rowHeight : startY };
+  };
+
+  const clusters: Cluster[] = components.map((nodes) => {
+    const inComponent = new Set(nodes);
+    const roots = nodes
+      .filter((f) => (dependentsOf.get(f)?.size ?? 0) === 0)
+      .toSorted(byName);
+
+    // Which roots reach each node (walking down dependency edges).
+    const reachedBy = new Map<string, Set<string>>();
+    for (const root of roots) {
+      const stack = [root];
+      const seen = new Set([root]);
+      while (stack.length > 0) {
+        const current = stack.pop()!;
+        for (const dep of depsOf.get(current) ?? []) {
+          if (!inComponent.has(dep) || seen.has(dep)) continue;
+          seen.add(dep);
+          let set = reachedBy.get(dep);
+          if (!set) reachedBy.set(dep, (set = new Set()));
+          set.add(root);
+          stack.push(dep);
+        }
+      }
+    }
+
+    const exclusiveOf = new Map<string, string[]>();
+    const shared: string[] = [];
+    for (const fileName of nodes) {
+      if ((dependentsOf.get(fileName)?.size ?? 0) === 0) continue; // root
+      const owners = reachedBy.get(fileName);
+      if (owners !== undefined && owners.size === 1) {
+        const owner = [...owners][0]!;
+        let list = exclusiveOf.get(owner);
+        if (!list) exclusiveOf.set(owner, (list = []));
+        list.push(fileName);
+      } else {
+        shared.push(fileName);
+      }
+    }
+
+    // Order blocks by how much shared infrastructure each root uses:
+    // light users float to the top rows, heavy sharers sink to the row
+    // just above the shared foundation, keeping their many edges short.
+    const sharedDegree = new Map<string, number>();
+    for (const node of shared) {
+      for (const owner of reachedBy.get(node) ?? []) {
+        sharedDegree.set(owner, (sharedDegree.get(owner) ?? 0) + 1);
+      }
+    }
+    const orderedRoots = roots.toSorted(
+      (a, b) =>
+        (sharedDegree.get(a) ?? 0) - (sharedDegree.get(b) ?? 0) || byName(a, b),
+    );
+
+    // One block per root: the root on top, its exclusive deps banded by
+    // depth below, wrapped to a narrow column so the block stays tall
+    // and skinny rather than smearing across the cluster.
+    type Block = {
+      positions: Map<string, NodePos>;
+      width: number;
+      height: number;
+    };
+    const blocks: Block[] = orderedRoots.map((root) => {
+      const positions = new Map<string, NodePos>();
+      const rootDims = dims(root);
+      positions.set(root, { x: 0, y: 0, ...rootDims });
+      const exclusive = exclusiveOf.get(root) ?? [];
+      const wrapWidth = Math.max(
+        rootDims.width,
+        Math.min(720, Math.ceil(Math.sqrt(exclusive.length)) * 170),
+      );
+      const bands: string[][] = [];
+      for (const fileName of exclusive) {
+        (bands[depths.get(fileName) ?? 0] ??= []).push(fileName);
+      }
+      let y = rootDims.height + 36;
+      let width = rootDims.width;
+      for (const band of bands) {
+        if (!band) continue;
+        const box = flowRows(positions, band.toSorted(byName), y, wrapWidth);
+        width = Math.max(width, box.width);
+        y = box.bottom + 32;
+      }
+      return { positions, width, height: y - 32 };
+    });
+
+    // Blocks flow into rows; the shared foundation goes below them.
     const positions = new Map<string, NodePos>();
-    let bandY = 0;
+    const blockWrap = Math.max(BAND_MAX_WIDTH, ...blocks.map((b) => b.width));
+    let bx = 0;
+    let by = 0;
+    let blockRowHeight = 0;
     let clusterWidth = 0;
-    for (const band of bands) {
+    for (const block of blocks) {
+      if (bx > 0 && bx + block.width > blockWrap) {
+        bx = 0;
+        by += blockRowHeight + 72;
+        blockRowHeight = 0;
+      }
+      for (const [fileName, pos] of block.positions) {
+        positions.set(fileName, { ...pos, x: pos.x + bx, y: pos.y + by });
+      }
+      clusterWidth = Math.max(clusterWidth, bx + block.width);
+      bx += block.width + 56;
+      blockRowHeight = Math.max(blockRowHeight, block.height);
+    }
+    let y = by + blockRowHeight + (shared.length > 0 ? 130 : 0);
+
+    // Shared foundation: depth bands, barycenter-ordered against the
+    // already-placed dependents so shared helpers drift toward their
+    // heaviest users.
+    const sharedBands: string[][] = [];
+    for (const fileName of shared) {
+      (sharedBands[depths.get(fileName) ?? 0] ??= []).push(fileName);
+    }
+    for (const band of sharedBands) {
       if (!band) continue;
-      const rowHeight =
-        Math.max(...band.map((f) => nodeHeight(dependencySet.has(f)))) +
-        ROW_GAP_Y;
-      // Barycenter of already-placed dependents; nodes without placed
-      // dependents (top band) keep alphabetical order.
       const keyed = band.map((fileName) => {
         const anchors = [...(dependentsOf.get(fileName) ?? [])]
           .map((d) => positions.get(d))
@@ -139,37 +301,23 @@ function layoutPositions(
         return { fileName, barycenter };
       });
       keyed.sort(
-        (a, b) =>
-          a.barycenter - b.barycenter ||
-          a.fileName.toLowerCase().localeCompare(b.fileName.toLowerCase()),
+        (a, b) => a.barycenter - b.barycenter || byName(a.fileName, b.fileName),
       );
-
-      let x = 0;
-      let row = 0;
-      for (const { fileName } of keyed) {
-        const isDependency = dependencySet.has(fileName);
-        const width = nodeWidth(displayName(fileName), isDependency);
-        if (x + width > BAND_MAX_WIDTH && x > 0) {
-          x = 0;
-          row += 1;
-        }
-        positions.set(fileName, {
-          x,
-          y: bandY + row * rowHeight,
-          width,
-          height: nodeHeight(isDependency),
-        });
-        clusterWidth = Math.max(clusterWidth, x + width);
-        x += width + SLOT_GAP_X;
-      }
-      bandY += (row + 1) * rowHeight + BAND_GAP;
+      const box = flowRows(
+        positions,
+        keyed.map((k) => k.fileName),
+        y,
+        Math.max(clusterWidth, BAND_MAX_WIDTH),
+      );
+      clusterWidth = Math.max(clusterWidth, box.width);
+      y = box.bottom + BAND_GAP;
     }
-    return {
-      positions,
-      width: clusterWidth,
-      height: Math.max(0, bandY - BAND_GAP),
-      size: nodes.length,
-    };
+
+    let height = 0;
+    for (const pos of positions.values()) {
+      height = Math.max(height, pos.y + pos.height);
+    }
+    return { positions, width: clusterWidth, height, size: nodes.length };
   });
 
   // Pack clusters into rows, largest first. Singletons sort last and
@@ -321,17 +469,17 @@ function GraphViewInner({
 
   // Refit when the visible set changes shape (filter switch, folder
   // change) — the initial fitView only covers mount.
+  const nodesInitialized = useNodesInitialized();
   const lastFitKey = useRef("");
   useEffect(() => {
+    if (!nodesInitialized) return;
     const key = `${filter}:${positions.size}`;
     if (lastFitKey.current === key) return;
-    const isFirst = lastFitKey.current === "";
     lastFitKey.current = key;
-    if (isFirst) return; // mount is handled by the fitView prop
     requestAnimationFrame(() => {
       void fitView({ padding: 0.1, maxZoom: 1, duration: 300 });
     });
-  }, [filter, positions.size, fitView]);
+  }, [nodesInitialized, filter, positions.size, fitView]);
   const lastCentered = useRef<string | null>(null);
   useEffect(() => {
     if (!selectedId) {
