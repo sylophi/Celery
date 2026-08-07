@@ -8,26 +8,86 @@ export type ModNodeData = {
   file: ModFile;
   orphan: boolean;
   missing: number;
-  // True when something depends on this mod — library mods read
-  // quieter than the top-level mods you actually play.
+  // True when something depends on this mod — dependencies render as
+  // compact pills, distinct from the card shape of top-level mods.
   hasDependents: boolean;
 };
 export type ModFlowNode = Node<ModNodeData, "mod">;
 
-export const NODE_HEIGHT = 46;
+// Two node shapes: top-level mods are two-line cards, dependencies are
+// slim single-line pills. The layout reads these to size bands.
+export const CARD_HEIGHT = 46;
+export const PILL_HEIGHT = 30;
 
-export function nodeWidth(label: string): number {
-  return Math.min(240, Math.max(130, Math.round(label.length * 6.6) + 58));
+export function nodeHeight(isDependency: boolean): number {
+  return isDependency ? PILL_HEIGHT : CARD_HEIGHT;
+}
+
+export function nodeWidth(label: string, isDependency: boolean): number {
+  return isDependency
+    ? Math.min(210, Math.max(90, Math.round(label.length * 6.1) + 44))
+    : Math.min(240, Math.max(130, Math.round(label.length * 6.6) + 58));
 }
 
 export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
   const { file } = data;
   const name = displayName(file.fileName);
   const version = file.entries[0]?.version ?? "";
+
+  if (data.hasDependents) {
+    return (
+      <div
+        className={cn(
+          "flex h-full items-center gap-1.5 rounded-full border bg-card px-2.5",
+          selected ? "border-ring ring-3 ring-ring/40" : "border-border",
+        )}
+      >
+        <Handle type="target" position={Position.Top} isConnectable={false} />
+        <span
+          aria-hidden
+          className={cn(
+            "size-1.5 shrink-0 rounded-full",
+            file.enabled ? "bg-on" : "bg-muted-foreground/40",
+          )}
+        />
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate text-[11px]",
+            file.enabled ? "text-card-foreground/80" : "text-muted-foreground",
+          )}
+        >
+          {name}
+        </span>
+        {file.favorite && (
+          <StarIcon className="size-2.5 shrink-0 fill-current text-muted-foreground" />
+        )}
+        {data.orphan && (
+          <span
+            aria-hidden
+            title="nothing enabled needs this"
+            className="size-1 shrink-0 rounded-full bg-warn"
+          />
+        )}
+        {(data.missing > 0 || file.parseError !== undefined) && (
+          <span
+            aria-hidden
+            title={file.parseError ?? `${data.missing} missing dependencies`}
+            className="size-1 shrink-0 rounded-full bg-destructive"
+          />
+        )}
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          isConnectable={false}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
-        "h-full rounded-lg border bg-card px-2.5 py-1.5 transition-colors",
+        "h-full rounded-lg border bg-card px-2.5 py-1.5",
         selected ? "border-ring ring-3 ring-ring/40" : "border-border",
       )}
     >
@@ -43,10 +103,9 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-xs",
-            file.enabled && !data.hasDependents
+            file.enabled
               ? "font-medium text-card-foreground"
               : "text-muted-foreground",
-            !file.enabled && "text-muted-foreground",
           )}
         >
           {name}
