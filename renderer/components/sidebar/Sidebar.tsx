@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { PlusIcon, StarIcon } from "lucide-react";
+import { ArrowUpDownIcon, PlusIcon, StarIcon } from "lucide-react";
 import type { FolderState, Group, ModFile } from "@shared/schemas";
 import type { ModIndex } from "@shared/graph";
 import { displayName } from "@/App";
@@ -11,6 +11,48 @@ import { ModIconGlyph } from "@/lib/modIcons";
 import { cn, dragRegion } from "@/lib/utils";
 
 const isMac = window.api.platform === "darwin";
+
+// Sort order for the mod list. Every mode breaks ties alphabetically.
+type SortMode = "name" | "enabled" | "category" | "size" | "updated";
+const SORT_MODES: { value: SortMode; label: string }[] = [
+  { value: "name", label: "name" },
+  { value: "enabled", label: "enabled first" },
+  { value: "category", label: "category" },
+  { value: "size", label: "size" },
+  { value: "updated", label: "recently updated" },
+];
+const SORT_STORAGE_KEY = "celery.sortMode";
+
+function isSortMode(value: string | null): value is SortMode {
+  return SORT_MODES.some((mode) => mode.value === value);
+}
+
+const byName = (a: ModFile, b: ModFile) =>
+  displayName(a.fileName)
+    .toLowerCase()
+    .localeCompare(displayName(b.fileName).toLowerCase());
+
+function makeComparator(
+  sort: SortMode,
+  categoryOf: (fileName: string) => string | undefined,
+): (a: ModFile, b: ModFile) => number {
+  switch (sort) {
+    case "name":
+      return byName;
+    case "enabled":
+      return (a, b) => Number(b.enabled) - Number(a.enabled) || byName(a, b);
+    case "category":
+      // Unmapped mods sort last; tilde follows letters in ASCII.
+      return (a, b) =>
+        (categoryOf(a.fileName) ?? "~").localeCompare(
+          categoryOf(b.fileName) ?? "~",
+        ) || byName(a, b);
+    case "size":
+      return (a, b) => b.sizeBytes - a.sizeBytes || byName(a, b);
+    case "updated":
+      return (a, b) => b.mtimeMs - a.mtimeMs || byName(a, b);
+  }
+}
 
 export function Sidebar({
   files,
@@ -45,6 +87,15 @@ export function Sidebar({
   );
   const categoryOf = (fileName: string) =>
     overview.data?.byFile[fileName]?.category;
+  const [sort, setSort] = useState<SortMode>(() => {
+    const stored = localStorage.getItem(SORT_STORAGE_KEY);
+    return isSortMode(stored) ? stored : "name";
+  });
+  const changeSort = (next: SortMode) => {
+    setSort(next);
+    localStorage.setItem(SORT_STORAGE_KEY, next);
+  };
+  const comparator = makeComparator(sort, categoryOf);
   const matches = query
     ? files.filter(
         (file) =>
@@ -57,8 +108,12 @@ export function Sidebar({
   // Top-level mods (the things you actually play) get their own
   // section; dependencies sit below it, de-emphasized. Classification
   // comes from App: hard dependents + per-mod overrides.
-  const topLevel = matches.filter((file) => !dependencySet.has(file.fileName));
-  const depended = matches.filter((file) => dependencySet.has(file.fileName));
+  const topLevel = matches
+    .filter((file) => !dependencySet.has(file.fileName))
+    .toSorted(comparator);
+  const depended = matches
+    .filter((file) => dependencySet.has(file.fileName))
+    .toSorted(comparator);
 
   return (
     <aside data-sidebar className="flex h-full flex-col">
@@ -90,6 +145,24 @@ export function Sidebar({
             spellCheck={false}
             className="h-7 w-full rounded-md border border-input bg-transparent px-2 text-xs text-foreground transition-colors outline-none placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
           />
+          <div className="mt-1 flex items-center gap-1.5 px-0.5">
+            <ArrowUpDownIcon
+              aria-hidden
+              className="size-3 shrink-0 text-muted-foreground/60"
+            />
+            <select
+              value={sort}
+              onChange={(event) => changeSort(event.target.value as SortMode)}
+              aria-label="sort mods by"
+              className="h-6 w-full cursor-pointer appearance-none rounded-md bg-transparent text-[11px] text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground"
+            >
+              {SORT_MODES.map((mode) => (
+                <option key={mode.value} value={mode.value}>
+                  {mode.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
