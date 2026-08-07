@@ -24,7 +24,11 @@ export function ConfirmDialog({
   onConfirm: () => void;
 }) {
   return (
-    <Dialog open={pending !== null} onClose={onCancel} title={pending?.title ?? ""}>
+    <Dialog
+      open={pending !== null}
+      onClose={onCancel}
+      title={pending?.title ?? ""}
+    >
       {pending && (
         <div className="flex flex-col gap-3">
           {pending.sections

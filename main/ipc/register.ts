@@ -1,7 +1,13 @@
 // The only sanctioned place calling `webContents.send`. Inputs are
 // parsed at the boundary; in dev, outputs are re-parsed too so handler
 // drift surfaces here instead of as a confusing renderer failure.
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent, type WebContents } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  type IpcMainInvokeEvent,
+  type WebContents,
+} from "electron";
 import type { Contract } from "@shared/ipc/contract";
 import type { BroadcastProducerPayload, Handlers } from "@shared/ipc/types";
 
@@ -17,7 +23,10 @@ export function registerContract<C extends Contract>(
     const def = contract[key];
     if (def.kind !== "invoke") continue;
     const handler = (
-      handlers as unknown as Record<string, (i: unknown, ctx: HandlerContext) => unknown>
+      handlers as unknown as Record<
+        string,
+        (i: unknown, ctx: HandlerContext) => unknown
+      >
     )[key];
     ipcMain.handle(def.channel, async (event, raw) => {
       const input = def.input.parse(raw);

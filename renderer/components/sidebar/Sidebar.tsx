@@ -39,7 +39,9 @@ export function Sidebar({
     ? files.filter(
         (file) =>
           file.fileName.toLowerCase().includes(query) ||
-          file.entries.some((entry) => entry.name.toLowerCase().includes(query)),
+          file.entries.some((entry) =>
+            entry.name.toLowerCase().includes(query),
+          ),
       )
     : files;
   // Top-level mods (the things you actually play) get their own
@@ -51,7 +53,10 @@ export function Sidebar({
   return (
     <aside data-sidebar className="flex h-full flex-col">
       <div
-        className={cn("flex h-[52px] shrink-0 items-center gap-2 px-3", isMac && "pl-[92px]")}
+        className={cn(
+          "flex h-[52px] shrink-0 items-center gap-2 px-3",
+          isMac && "pl-[92px]",
+        )}
         style={dragRegion("drag")}
       >
         <div className="min-w-0 flex-1 truncate text-[13px] font-semibold tracking-tight">
@@ -154,7 +159,9 @@ function ModSection({
         <h3 className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
           {label}
         </h3>
-        <span className="tabular text-[10px] text-muted-foreground/60">{files.length}</span>
+        <span className="tabular text-[10px] text-muted-foreground/60">
+          {files.length}
+        </span>
       </div>
       <ul className="pb-1">
         {files.map((file) => (
@@ -257,14 +264,19 @@ function GroupsSection({
 }) {
   const saveState = useSaveFolderState(folder);
   const groups = folderState.groups;
-  const saveGroups = (next: Group[]) => saveState.mutate({ ...folderState, groups: next });
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
 
   const create = () => {
     const trimmed = name.trim();
     if (trimmed) {
-      saveGroups([...groups, { id: crypto.randomUUID(), name: trimmed, members: [] }]);
+      saveState.mutate((state) => ({
+        ...state,
+        groups: [
+          ...state.groups,
+          { id: crypto.randomUUID(), name: trimmed, members: [] },
+        ],
+      }));
     }
     setName("");
     setAdding(false);
@@ -294,11 +306,19 @@ function GroupsSection({
           groups={groups}
           index={index}
           onToggle={onToggleGroup}
-          onDelete={() => saveGroups(groups.filter((g) => g.id !== group.id))}
+          onDelete={() =>
+            saveState.mutate((state) => ({
+              ...state,
+              groups: state.groups.filter((g) => g.id !== group.id),
+            }))
+          }
         />
       ))}
       {adding ? (
         <input
+          // The input only mounts after an explicit "new group" click,
+          // so moving focus into it is the expected outcome.
+          // oxlint-disable-next-line jsx-a11y/no-autofocus
           autoFocus
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -338,7 +358,9 @@ function GroupRow({
   onDelete: () => void;
 }) {
   const members = group.members.filter((m) => index?.byFileName.has(m));
-  const enabledCount = members.filter((m) => index?.byFileName.get(m)?.enabled).length;
+  const enabledCount = members.filter(
+    (m) => index?.byFileName.get(m)?.enabled,
+  ).length;
   const allOn = members.length > 0 && enabledCount === members.length;
 
   // Two-step destructive action instead of a confirm dialog: first
@@ -354,7 +376,9 @@ function GroupRow({
 
   return (
     <div className="group/grouprow flex h-8 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-accent">
-      <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{group.name}</span>
+      <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">
+        {group.name}
+      </span>
       <button
         type="button"
         aria-label={`delete group ${group.name}`}

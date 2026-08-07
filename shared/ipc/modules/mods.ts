@@ -11,7 +11,9 @@ export const modsContract = {
   setEnabled: invoke(
     "mods:setEnabled",
     z.object({
-      changes: z.array(z.object({ fileName: z.string(), enabled: z.boolean() })),
+      changes: z.array(
+        z.object({ fileName: z.string(), enabled: z.boolean() }),
+      ),
     }),
     ModsSnapshotSchema,
   ),

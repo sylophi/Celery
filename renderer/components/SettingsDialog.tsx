@@ -41,18 +41,29 @@ export function SettingsDialog({
       <div className="flex flex-col gap-4">
         <div>
           <div className="flex min-h-7 items-center justify-between gap-3">
-            <span className="shrink-0 text-xs text-muted-foreground">mods folder</span>
-            <Button variant="outline" size="xs" onClick={() => void changeFolder()}>
+            <span className="shrink-0 text-xs text-muted-foreground">
+              mods folder
+            </span>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => void changeFolder()}
+            >
               change
             </Button>
           </div>
-          <p className="truncate text-[11px] text-muted-foreground/70" title={folder}>
+          <p
+            className="truncate text-[11px] text-muted-foreground/70"
+            title={folder}
+          >
             {folder ?? "not set"}
           </p>
         </div>
         <div className="flex min-h-7 items-center justify-between gap-3">
           <div>
-            <span className="text-xs text-muted-foreground">confirm dependency cascades</span>
+            <span className="text-xs text-muted-foreground">
+              confirm dependency cascades
+            </span>
             <p className="text-[10px] leading-tight text-muted-foreground/60">
               preview which mods a toggle drags along before writing
             </p>
@@ -76,8 +87,8 @@ export function SettingsDialog({
         </div>
         <UpdatesRow />
         <p className="text-[10px] leading-tight text-muted-foreground/70">
-          Celery reads and writes Everest's own files (blacklist.txt, favorites.txt), so the in-game
-          menu and Olympus stay in sync
+          Celery reads and writes Everest's own files (blacklist.txt,
+          favorites.txt), so the in-game menu and Olympus stay in sync
         </p>
       </div>
     </Dialog>
@@ -117,12 +128,15 @@ function UpdatesRow() {
         <span className="text-xs text-muted-foreground">updates</span>
         {state?.kind === "unsupported" && (
           <p className="text-[10px] leading-tight text-muted-foreground/60">
-            auto-update needs the installed macOS build — portable and dev builds update by
-            downloading a new release
+            auto-update needs the installed macOS build — portable and dev
+            builds update by downloading a new release
           </p>
         )}
         {state?.kind === "error" && (
-          <p className="truncate text-[10px] leading-tight text-destructive" title={state.message}>
+          <p
+            className="truncate text-[10px] leading-tight text-destructive"
+            title={state.message}
+          >
             {state.message}
           </p>
         )}

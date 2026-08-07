@@ -23,7 +23,9 @@ export const modsHandlers: Handlers<typeof modsContract, HandlerContext> = {
   setEnabled: async ({ changes }) => {
     const folder = await requireFolder();
     const snapshot = await scanModsFolder(folder);
-    const enabledByFile = new Map(snapshot.files.map((f) => [f.fileName, f.enabled]));
+    const enabledByFile = new Map(
+      snapshot.files.map((f) => [f.fileName, f.enabled]),
+    );
     for (const change of changes) {
       if (!enabledByFile.has(change.fileName)) {
         throw new Error(`Unknown mod file: ${change.fileName}`);
@@ -44,6 +46,13 @@ export const modsHandlers: Handlers<typeof modsContract, HandlerContext> = {
 
   setFavorite: async ({ fileName, favorite }) => {
     const folder = await requireFolder();
+    // Validate against the scan before writing: favorites.txt is
+    // line-oriented, so an arbitrary renderer-supplied string (or one
+    // containing a newline) must never reach it.
+    const snapshot = await scanModsFolder(folder);
+    if (!snapshot.files.some((f) => f.fileName === fileName)) {
+      throw new Error(`Unknown mod file: ${fileName}`);
+    }
     await writeFavorite(folder, fileName, favorite);
     return scanModsFolder(folder);
   },

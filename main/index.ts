@@ -2,6 +2,7 @@ import { app, BrowserWindow, nativeTheme } from "electron";
 import path from "node:path";
 import { readThemeSync } from "./lib/config";
 import { registerIpcHandlers } from "./ipc";
+import { attachContextMenu } from "./electron/contextMenu";
 import { startUpdater } from "./electron/updater";
 import { ensureCeleryRoot, initCeleryRoot } from "./lib/util/paths";
 import { isMac, isWindows } from "./lib/util/platform";
@@ -89,6 +90,8 @@ const createWindow = () => {
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     );
   }
+
+  attachContextMenu(mainWindow);
 };
 
 // AppKit re-tints the vibrancy material on nativeTheme changes on its

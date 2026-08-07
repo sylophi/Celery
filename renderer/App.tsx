@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { FolderOpenIcon, RefreshCwIcon, Settings2Icon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { dependentClosure, findOrphans, planDisable, planEnable } from "@shared/graph";
+import {
+  dependentClosure,
+  findOrphans,
+  planDisable,
+  planEnable,
+} from "@shared/graph";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ConfirmDialog, type PendingAction } from "@/components/ConfirmDialog";
@@ -11,7 +16,13 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { StatusPill, type Status } from "@/components/StatusPill";
 import { EMPTY_FOLDER_STATE } from "@shared/schemas";
-import { useConfig, useFolderState, useModIndex, useMods, useSetEnabled } from "@/hooks/useMods";
+import {
+  useConfig,
+  useFolderState,
+  useModIndex,
+  useMods,
+  useSetEnabled,
+} from "@/hooks/useMods";
 import { queryKeys } from "@/lib/queryKeys";
 import { cn, dragRegion } from "@/lib/utils";
 
@@ -41,7 +52,9 @@ export function App() {
   // Resizable sidebar, persisted across sessions.
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const stored = Number(localStorage.getItem("celery.sidebarWidth"));
-    return Number.isFinite(stored) && stored >= 180 && stored <= 420 ? stored : 240;
+    return Number.isFinite(stored) && stored >= 180 && stored <= 420
+      ? stored
+      : 240;
   });
   const startSidebarResize = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -70,7 +83,8 @@ export function App() {
   for (const file of index?.files ?? []) {
     const byDefault = (index?.dependents.get(file.fileName)?.size ?? 0) > 0;
     const section =
-      folderState.sectionOverrides[file.fileName] ?? (byDefault ? "dependency" : "mod");
+      folderState.sectionOverrides[file.fileName] ??
+      (byDefault ? "dependency" : "mod");
     if (section === "dependency") dependencySet.add(file.fileName);
   }
 
@@ -80,6 +94,10 @@ export function App() {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target?.closest("input, textarea, [data-popup]")) return;
+      // A dialog can be open while focus sits outside it (opened by
+      // mouse click); Escape must close only the dialog, not also
+      // clear the selection behind it.
+      if (document.querySelector("[data-popup]")) return;
       if (event.key === "/") {
         event.preventDefault();
         searchRef.current?.focus();
@@ -91,9 +109,26 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const apply = (changes: { fileName: string; enabled: boolean }[], message: string) => {
+  const apply = (
+    changes: { fileName: string; enabled: boolean }[],
+    message: string,
+  ) => {
     setEnabled.mutate(changes, {
-      onSuccess: () => setStatus((prev) => ({ text: message, nonce: (prev?.nonce ?? 0) + 1 })),
+      onSuccess: () =>
+        setStatus((prev) => ({
+          text: message,
+          kind: "ok",
+          nonce: (prev?.nonce ?? 0) + 1,
+        })),
+      // A failed write (locked blacklist.txt with the game running,
+      // permissions) must be visible, not a toggle that silently
+      // snaps back.
+      onError: (error) =>
+        setStatus((prev) => ({
+          text: `couldn't write blacklist: ${error instanceof Error ? error.message : String(error)}`,
+          kind: "error",
+          nonce: (prev?.nonce ?? 0) + 1,
+        })),
     });
   };
 
@@ -103,7 +138,11 @@ export function App() {
   // outsider still needs. Cascades apply immediately by default — the
   // status pill reports what happened — unless the confirm-cascades
   // setting routes them through the preview dialog first.
-  const requestToggle = (fileNames: string[], enable: boolean, label: string) => {
+  const requestToggle = (
+    fileNames: string[],
+    enable: boolean,
+    label: string,
+  ) => {
     if (!index) return;
     const confirm = configQuery.data?.confirmCascades ?? false;
     const run = (
@@ -150,7 +189,9 @@ export function App() {
         `disabled ${label} + ${dependents.length} dependents`,
         {
           title: "disable dependents too?",
-          sections: [{ label: "these enabled mods need it", items: dependents }],
+          sections: [
+            { label: "these enabled mods need it", items: dependents },
+          ],
           confirmLabel: `disable ${forced.length} mods`,
         },
       );
@@ -176,8 +217,10 @@ export function App() {
     );
   };
 
-  const selectedFile = selectedId && index ? (index.byFileName.get(selectedId) ?? null) : null;
-  const enabledCount = modsQuery.data?.files.filter((f) => f.enabled).length ?? 0;
+  const selectedFile =
+    selectedId && index ? (index.byFileName.get(selectedId) ?? null) : null;
+  const enabledCount =
+    modsQuery.data?.files.filter((f) => f.enabled).length ?? 0;
   const totalCount = modsQuery.data?.files.length ?? 0;
 
   return (
@@ -192,13 +235,38 @@ export function App() {
           dependencySet={dependencySet}
           selectedId={selectedId}
           onSelect={setSelectedId}
-          onToggleGroup={(group, enable) => requestToggle(group.members, enable, group.name)}
+          onToggleGroup={(group, enable) =>
+            requestToggle(group.members, enable, group.name)
+          }
           searchRef={searchRef}
         />
       </div>
+      {/* ARIA window-splitter pattern: a focusable separator that also
+          resizes with arrow keys. The rule can't see that the role
+          makes this the sanctioned interactive-separator widget. */}
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="resize sidebar"
+        tabIndex={0}
         onMouseDown={startSidebarResize}
-        className="relative w-px shrink-0 cursor-col-resize bg-border"
+        onKeyDown={(event) => {
+          const delta =
+            event.key === "ArrowLeft"
+              ? -16
+              : event.key === "ArrowRight"
+                ? 16
+                : 0;
+          if (delta === 0) return;
+          event.preventDefault();
+          setSidebarWidth((width) => {
+            const next = Math.min(420, Math.max(180, width + delta));
+            localStorage.setItem("celery.sidebarWidth", String(next));
+            return next;
+          });
+        }}
+        className="relative w-px shrink-0 cursor-col-resize bg-border outline-none focus-visible:bg-ring"
       >
         <div className="absolute inset-y-0 -left-1 z-10 w-2" />
       </div>
@@ -234,16 +302,27 @@ export function App() {
                 {totalCount} mods · {enabledCount} enabled
               </span>
               <div className="flex-1" />
-              <div className="flex items-center gap-1" style={dragRegion("no-drag")}>
+              <div
+                className="flex items-center gap-1"
+                style={dragRegion("no-drag")}
+              >
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label="rescan mods folder"
                   title="rescan mods folder"
                   disabled={modsQuery.isFetching}
-                  onClick={() => void queryClient.invalidateQueries({ queryKey: queryKeys.mods })}
+                  onClick={() =>
+                    void queryClient.invalidateQueries({
+                      queryKey: queryKeys.mods,
+                    })
+                  }
                 >
-                  <RefreshCwIcon className={modsQuery.isFetching ? "animate-spin" : undefined} />
+                  <RefreshCwIcon
+                    className={
+                      modsQuery.isFetching ? "animate-spin" : undefined
+                    }
+                  />
                 </Button>
                 <Button
                   variant="ghost"
@@ -259,6 +338,26 @@ export function App() {
             <div className="relative min-h-0 flex-1">
               {modsQuery.isLoading ? (
                 <ScanProgress />
+              ) : modsQuery.isError ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+                  <p className="max-w-md text-xs text-destructive">
+                    couldn't read the mods folder:{" "}
+                    {modsQuery.error instanceof Error
+                      ? modsQuery.error.message
+                      : String(modsQuery.error)}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      void queryClient.invalidateQueries({
+                        queryKey: queryKeys.mods,
+                      })
+                    }
+                  >
+                    try again
+                  </Button>
+                </div>
               ) : (
                 index && (
                   <GraphView
@@ -300,7 +399,9 @@ export function App() {
               style={dragRegion("drag")}
             />
             <Onboarding
-              onPicked={() => void queryClient.invalidateQueries({ queryKey: queryKeys.config })}
+              // Invalidate everything: the mods query has already
+              // cached an empty snapshot from before a folder existed.
+              onPicked={() => void queryClient.invalidateQueries()}
             />
           </>
         )}
@@ -316,7 +417,11 @@ export function App() {
           setPending(null);
         }}
       />
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} folder={folder} />
+      <SettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        folder={folder}
+      />
       <StatusPill status={status} />
     </div>
   );
@@ -361,10 +466,12 @@ function Onboarding({ onPicked }: { onPicked: () => void }) {
         className="group flex h-64 w-full max-w-md cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center transition-all duration-150 outline-none hover:border-foreground/40 hover:bg-muted/30 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
       >
         <FolderOpenIcon className="size-5 text-muted-foreground transition-colors group-hover:text-foreground" />
-        <div className="text-sm font-medium">point Celery at your Mods folder</div>
+        <div className="text-sm font-medium">
+          point Celery at your Mods folder
+        </div>
         <p className="max-w-xs text-xs text-muted-foreground">
-          the folder inside your Celeste install holding the mod zips, blacklist.txt and
-          favorites.txt
+          the folder inside your Celeste install holding the mod zips,
+          blacklist.txt and favorites.txt
         </p>
       </button>
     </div>

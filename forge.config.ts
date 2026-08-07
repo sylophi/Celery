@@ -6,9 +6,22 @@ import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import { rename } from "node:fs/promises";
 
+// Target platform of this build: the host by default, overridden by
+// `--platform win32` when cross-packaging (shigomori's helper).
+function targetPlatform(): string {
+  const eq = process.argv.find((a) => a.startsWith("--platform="));
+  if (eq) return eq.slice("--platform=".length);
+  const idx = process.argv.findIndex((a) => a === "--platform" || a === "-p");
+  if (idx >= 0 && process.argv[idx + 1]) return process.argv[idx + 1]!;
+  return process.platform;
+}
+const isWindowsTarget = targetPlatform() === "win32";
+
 const shouldSignMac = Boolean(process.env.APPLE_SIGNING_IDENTITY);
 const osxNotarizeConfig =
-  process.env.APPLE_ID && process.env.APPLE_APP_SPECIFIC_PASSWORD && process.env.APPLE_TEAM_ID
+  process.env.APPLE_ID &&
+  process.env.APPLE_APP_SPECIFIC_PASSWORD &&
+  process.env.APPLE_TEAM_ID
     ? {
         appleId: process.env.APPLE_ID,
         appleIdPassword: process.env.APPLE_APP_SPECIFIC_PASSWORD,
@@ -23,9 +36,14 @@ const config: ForgeConfig = {
     appBundleId: "com.sylophi.celery",
     appCopyright: "© 2026 sylophi",
     // Portable Windows zip: keep the exe name space-free and stable.
-    executableName: "celery",
-    ...(shouldSignMac ? { osxSign: { identity: process.env.APPLE_SIGNING_IDENTITY } } : {}),
-    ...(shouldSignMac && osxNotarizeConfig ? { osxNotarize: osxNotarizeConfig } : {}),
+    // Scoped to win32 so the macOS bundle keeps its productName binary.
+    ...(isWindowsTarget ? { executableName: "celery" } : {}),
+    ...(shouldSignMac
+      ? { osxSign: { identity: process.env.APPLE_SIGNING_IDENTITY } }
+      : {}),
+    ...(shouldSignMac && osxNotarizeConfig
+      ? { osxNotarize: osxNotarizeConfig }
+      : {}),
   },
   rebuildConfig: {},
   hooks: {

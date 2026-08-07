@@ -59,7 +59,9 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
         <span className="tabular truncate">{version}</span>
         {data.orphan && <span className="shrink-0 text-warn">orphan</span>}
         {data.missing > 0 && (
-          <span className="shrink-0 text-destructive">{data.missing} missing</span>
+          <span className="shrink-0 text-destructive">
+            {data.missing} missing
+          </span>
         )}
         {file.parseError && (
           <span className="shrink-0 text-destructive" title={file.parseError}>

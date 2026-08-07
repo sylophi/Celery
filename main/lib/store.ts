@@ -33,7 +33,29 @@ export function readJsonFileSync<S extends z.ZodTypeAny>(
   }
 }
 
-export async function writeJsonFile(name: string, value: unknown): Promise<void> {
+// Strict variant for read-modify-write flows: only a missing file reads
+// as the fallback. Corrupt JSON or a schema mismatch throws — degrading
+// to the fallback there would make the subsequent write silently
+// discard everything else the file held.
+export async function readJsonFileStrict<S extends z.ZodTypeAny>(
+  name: string,
+  schema: S,
+  fallback: z.output<S>,
+): Promise<z.output<S>> {
+  let raw: string;
+  try {
+    raw = await readFile(path.join(celeryRoot(), name), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return fallback;
+    throw error;
+  }
+  return schema.parse(JSON.parse(raw));
+}
+
+export async function writeJsonFile(
+  name: string,
+  value: unknown,
+): Promise<void> {
   const target = path.join(celeryRoot(), name);
   const tmp = `${target}.tmp`;
   await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ModsSnapshot } from "@shared/schemas";
+import type { FolderState, ModsSnapshot } from "@shared/schemas";
 import { buildIndex } from "@shared/graph";
 import { queryKeys } from "@/lib/queryKeys";
 
@@ -39,8 +39,13 @@ export function useSetEnabled() {
 export function useSetFavorite() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ fileName, favorite }: { fileName: string; favorite: boolean }) =>
-      window.api.mods.setFavorite(fileName, favorite),
+    mutationFn: ({
+      fileName,
+      favorite,
+    }: {
+      fileName: string;
+      favorite: boolean;
+    }) => window.api.mods.setFavorite(fileName, favorite),
     onSuccess: (snapshot) => {
       queryClient.setQueryData(queryKeys.mods, snapshot);
     },
@@ -55,15 +60,25 @@ export function useFolderState(folder: string | undefined) {
   });
 }
 
+// Mutations take an UPDATER over the freshest cached state, not a
+// snapshot: building the payload from a component prop races — a second
+// click before the first write's refetch lands would clobber it, and a
+// click before the initial load would wipe the file with EMPTY state.
 export function useSaveFolderState(folder: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (state: Parameters<typeof window.api.folderState.write>[1]) =>
-      window.api.folderState.write(folder!, state),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.folderState(folder ?? ""),
-      });
+    mutationFn: async (update: (state: FolderState) => FolderState) => {
+      const key = queryKeys.folderState(folder ?? "");
+      const current = queryClient.getQueryData<FolderState>(key);
+      if (!folder || current === undefined) {
+        throw new Error("folder state not loaded yet");
+      }
+      const next = update(current);
+      await window.api.folderState.write(folder, next);
+      return next;
+    },
+    onSuccess: (next) => {
+      queryClient.setQueryData(queryKeys.folderState(folder ?? ""), next);
     },
   });
 }

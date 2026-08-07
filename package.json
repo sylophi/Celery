@@ -5,12 +5,17 @@
   "description": "Dependency-aware Celeste mod manager with a graph view, built on Everest's own files.",
   "license": "MIT",
   "author": "sylophi",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sylophi/celery.git"
+  },
   "main": ".vite/build/index.js",
   "scripts": {
     "start": "electron-forge start",
     "dev": "pnpm run start",
     "package": "electron-forge package",
     "make": "electron-forge make",
+    "publish": "electron-forge publish",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
     "format": "oxfmt .",

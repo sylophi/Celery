@@ -93,7 +93,9 @@ export function startUpdater(): void {
     if (state.kind !== "ready") setState({ kind: "idle" });
   });
   autoUpdater.on("update-downloaded", (_event, _notes, releaseName) => {
-    const version = releaseName?.startsWith("v") ? releaseName.slice(1) : (releaseName ?? "");
+    const version = releaseName?.startsWith("v")
+      ? releaseName.slice(1)
+      : (releaseName ?? "");
     setState({ kind: "ready", version });
   });
   autoUpdater.on("error", (err) => {

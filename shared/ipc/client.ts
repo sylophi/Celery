@@ -22,12 +22,14 @@ export const config = {
 } as const;
 
 export const dialog = {
-  pickFolder: (options?: { title?: string }) => dialogClient.pickFolder(options),
+  pickFolder: (options?: { title?: string }) =>
+    dialogClient.pickFolder(options),
 } as const;
 
 export const folderState = {
   read: (folder: string) => folderStateClient.read({ folder }),
-  write: (folder: string, state: FolderState) => folderStateClient.write({ folder, state }),
+  write: (folder: string, state: FolderState) =>
+    folderStateClient.write({ folder, state }),
 } as const;
 
 export const mods = {

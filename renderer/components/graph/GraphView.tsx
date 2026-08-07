@@ -92,7 +92,8 @@ function layoutPositions(
         .filter((p) => p !== undefined);
       const barycenter =
         anchors.length > 0
-          ? anchors.reduce((sum, p) => sum + p.x + p.width / 2, 0) / anchors.length
+          ? anchors.reduce((sum, p) => sum + p.x + p.width / 2, 0) /
+            anchors.length
           : Infinity;
       return { fileName, barycenter };
     });
@@ -149,18 +150,27 @@ function GraphViewInner({
   onSelect: (fileName: string | null) => void;
 }) {
   const visible = new Set(
-    (filter === "enabled" ? index.files.filter((f) => f.enabled) : index.files).map(
-      (f) => f.fileName,
-    ),
+    (filter === "enabled"
+      ? index.files.filter((f) => f.enabled)
+      : index.files
+    ).map((f) => f.fileName),
   );
 
   const positions = layoutPositions(index, visible);
 
   // The selected node's neighborhood: everything it transitively needs
   // plus everything that transitively needs it.
+  // Hard closure both ways, plus one hop of optional neighbors: their
+  // edges are drawn as active around the selection, so the nodes they
+  // point at must not be dimmed out from under them.
   const neighborhood =
     selectedId && visible.has(selectedId)
-      ? new Set([...depClosure(index, [selectedId]), ...dependentClosure(index, [selectedId])])
+      ? new Set([
+          ...depClosure(index, [selectedId]),
+          ...dependentClosure(index, [selectedId]),
+          ...(index.optionalDeps.get(selectedId) ?? []),
+          ...(index.optionalDependents.get(selectedId) ?? []),
+        ])
       : null;
 
   const nodes: ModFlowNode[] = (() => {
@@ -194,7 +204,8 @@ function GraphViewInner({
     const out: Edge[] = [];
     const push = (from: string, to: string, optional: boolean) => {
       if (!visible.has(from) || !visible.has(to)) return;
-      const active = selectedId !== null && (from === selectedId || to === selectedId);
+      const active =
+        selectedId !== null && (from === selectedId || to === selectedId);
       const dimmed =
         (neighborhood && !(neighborhood.has(from) && neighborhood.has(to))) ||
         (filter === "orphans" && !(orphans.has(from) || orphans.has(to)));
@@ -202,9 +213,13 @@ function GraphViewInner({
         id: `${optional ? "o" : "h"}:${from}->${to}`,
         source: from,
         target: to,
-        className: [optional && "edge-optional", active && "edge-active"].filter(Boolean).join(" "),
+        className: [optional && "edge-optional", active && "edge-active"]
+          .filter(Boolean)
+          .join(" "),
         style: dimmed ? { opacity: 0.12 } : undefined,
-        markerEnd: active ? { type: MarkerType.ArrowClosed, width: 14, height: 14 } : undefined,
+        markerEnd: active
+          ? { type: MarkerType.ArrowClosed, width: 14, height: 14 }
+          : undefined,
       });
     };
     for (const [from, deps] of index.hardDeps) {
@@ -263,8 +278,18 @@ function GraphViewInner({
       selectNodesOnDrag={false}
       deleteKeyCode={null}
     >
-      <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--edge-optional)" />
-      <MiniMap pannable zoomable position="bottom-left" style={{ width: 140, height: 96 }} />
+      <Background
+        variant={BackgroundVariant.Dots}
+        gap={24}
+        size={1}
+        color="var(--edge-optional)"
+      />
+      <MiniMap
+        pannable
+        zoomable
+        position="bottom-left"
+        style={{ width: 140, height: 96 }}
+      />
     </ReactFlow>
   );
 }

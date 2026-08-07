@@ -41,7 +41,8 @@ function Button({
   size = "default",
   type = "button",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants>) {
+}: ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants>) {
   return (
     <button
       data-slot="button"

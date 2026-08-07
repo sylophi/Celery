@@ -1,16 +1,32 @@
 {
   "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc", "react", "import"],
+  "plugins": ["typescript", "unicorn", "oxc", "react", "import", "jsx-a11y"],
+  "settings": {
+    "react": {
+      "version": "19"
+    }
+  },
   "categories": {
     "correctness": "error",
     "perf": "error",
     "suspicious": "error"
   },
-  "jsPlugins": [{ "name": "react-hooks-js", "specifier": "eslint-plugin-react-hooks" }],
+  "jsPlugins": [
+    { "name": "react-hooks-js", "specifier": "eslint-plugin-react-hooks" }
+  ],
   "rules": {
     "react/react-in-jsx-scope": "off",
     "react/jsx-no-constructed-context-values": "off",
+    "jsx-a11y/prefer-tag-over-role": "off",
     "import/no-unassigned-import": ["error", { "allow": ["**/*.css"] }],
+    "no-restricted-properties": [
+      "error",
+      {
+        "object": "process",
+        "property": "platform",
+        "message": "Use isMac/isWindows/platformId from main/lib/util/platform.ts (main) or window.api.platform (renderer)."
+      }
+    ],
     "no-restricted-imports": [
       "error",
       {
@@ -39,5 +55,17 @@
     "react-hooks-js/config": "error",
     "react-hooks-js/gating": "error"
   },
+  "overrides": [
+    {
+      "files": [
+        "main/lib/util/platform.ts",
+        "main/preload.ts",
+        "forge.config.ts"
+      ],
+      "rules": {
+        "no-restricted-properties": "off"
+      }
+    }
+  ],
   "ignorePatterns": [".vite", "out", "node_modules"]
 }

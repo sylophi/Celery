@@ -60,7 +60,8 @@
 
   /* Floating-panel elevation, shared by every floating surface so they
      all cast the same shadow. */
-  --shadow-floating: 0 8px 24px -8px oklch(0 0 0 / 0.15), 0 2px 6px -2px oklch(0 0 0 / 0.08);
+  --shadow-floating:
+    0 8px 24px -8px oklch(0 0 0 / 0.15), 0 2px 6px -2px oklch(0 0 0 / 0.08);
 }
 
 .dark {
@@ -216,6 +217,9 @@
 }
 .status-pill-fade {
   animation: status-pill-fade 2.4s var(--ease-out-quart) forwards;
+}
+.status-pill-fade-slow {
+  animation: status-pill-fade 5s var(--ease-out-quart) forwards;
 }
 
 /* Shimmer bar for indeterminate progress (scan). */

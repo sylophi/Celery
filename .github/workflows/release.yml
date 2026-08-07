@@ -49,9 +49,10 @@ jobs:
           fi
           npm pkg set version="$VERSION"
 
-      # Signing + notarization are optional: without the secrets the
-      # build ships unsigned (Gatekeeper warns on first run, and macOS
-      # auto-update requires a signed build to actually install).
+      # Fail fast when signing secrets are missing: a green run that
+      # uploads an unsigned .app would be Gatekeeper-blocked AND would
+      # silently break the Squirrel.Mac auto-update chain. Unsigned
+      # test builds belong in `pnpm make` locally, not in releases.
       - name: Import Developer ID certificate
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -60,8 +61,8 @@ jobs:
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           if [[ -z "$APPLE_SIGNING_IDENTITY" || -z "$BUILD_CERTIFICATE_BASE64" || -z "$P12_PASSWORD" || -z "$KEYCHAIN_PASSWORD" ]]; then
-            echo "Signing secrets not set; building unsigned."
-            exit 0
+            echo "Missing signing secrets. Set APPLE_SIGNING_IDENTITY, BUILD_CERTIFICATE_BASE64, P12_PASSWORD, and KEYCHAIN_PASSWORD."
+            exit 1
           fi
 
           CERTIFICATE_PATH="$RUNNER_TEMP/build_certificate.p12"
@@ -75,6 +76,17 @@ jobs:
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
+      - name: Validate notarization credentials
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [[ -z "$APPLE_ID" || -z "$APPLE_APP_SPECIFIC_PASSWORD" || -z "$APPLE_TEAM_ID" ]]; then
+            echo "Missing notarization secrets. Set APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, and APPLE_TEAM_ID."
+            exit 1
+          fi
+
       - name: Build distributables
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -84,13 +96,7 @@ jobs:
         run: pnpm exec electron-forge publish --dry-run
 
       - name: Verify signing and notarization
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
-          if [[ -z "$APPLE_SIGNING_IDENTITY" ]]; then
-            echo "Unsigned build; skipping verification."
-            exit 0
-          fi
           APP_PATH="out/Celery-darwin-arm64/Celery.app"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           spctl --assess --type execute --verbose "$APP_PATH"

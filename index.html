@@ -15,7 +15,8 @@
           var stored = localStorage.getItem("celery.theme") || "system";
           var dark =
             stored === "dark" ||
-            (stored === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+            (stored === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
           var html = document.documentElement;
           if (dark) html.classList.add("dark");
           html.style.colorScheme = dark ? "dark" : "light";

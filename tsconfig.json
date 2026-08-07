@@ -5,7 +5,11 @@
     "moduleResolution": "bundler",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["node", "vite/client", "@electron-forge/plugin-vite/forge-vite-env"],
+    "types": [
+      "node",
+      "vite/client",
+      "@electron-forge/plugin-vite/forge-vite-env"
+    ],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -26,5 +30,11 @@
       "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["main/**/*", "renderer/**/*", "shared/**/*", "forge.config.ts", "vite.*.config.ts"]
+  "include": [
+    "main/**/*",
+    "renderer/**/*",
+    "shared/**/*",
+    "forge.config.ts",
+    "vite.*.config.ts"
+  ]
 }

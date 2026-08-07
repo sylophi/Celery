@@ -31,8 +31,22 @@ export function buildIndex(snapshot: ModsSnapshot): ModIndex {
   const providerOf = new Map<string, string>();
   for (const file of snapshot.files) {
     byFileName.set(file.fileName, file);
+  }
+  for (const file of snapshot.files) {
     for (const entry of file.entries) {
-      if (!providerOf.has(entry.name)) providerOf.set(entry.name, file.fileName);
+      const existing = providerOf.get(entry.name);
+      if (existing === undefined) {
+        providerOf.set(entry.name, file.fileName);
+        continue;
+      }
+      // Duplicate providers (two zips shipping the same mod Name):
+      // prefer the enabled copy — that's the one Everest actually
+      // loads, so edges, cascades, and orphan detection should bind
+      // to it rather than to whichever sorts first.
+      const existingFile = byFileName.get(existing)!;
+      if (!existingFile.enabled && file.enabled) {
+        providerOf.set(entry.name, file.fileName);
+      }
     }
   }
 
@@ -88,7 +102,10 @@ export function buildIndex(snapshot: ModsSnapshot): ModIndex {
   };
 }
 
-function walk(starts: Iterable<string>, edges: Map<string, Set<string>>): Set<string> {
+function walk(
+  starts: Iterable<string>,
+  edges: Map<string, Set<string>>,
+): Set<string> {
   const seen = new Set<string>();
   const stack = [...starts];
   while (stack.length > 0) {
@@ -108,7 +125,10 @@ export function depClosure(index: ModIndex, fileNames: string[]): Set<string> {
 }
 
 // Transitive hard dependents, including the start files.
-export function dependentClosure(index: ModIndex, fileNames: string[]): Set<string> {
+export function dependentClosure(
+  index: ModIndex,
+  fileNames: string[],
+): Set<string> {
   return walk(fileNames, index.dependents);
 }
 
@@ -120,7 +140,9 @@ export type EnablePlan = {
 };
 
 export function planEnable(index: ModIndex, fileNames: string[]): EnablePlan {
-  const targets = fileNames.filter((f) => index.byFileName.get(f)?.enabled === false);
+  const targets = fileNames.filter(
+    (f) => index.byFileName.get(f)?.enabled === false,
+  );
   const closure = depClosure(index, targets);
   const cascade = [...closure]
     .filter((f) => !targets.includes(f))
@@ -140,7 +162,9 @@ export type DisablePlan = {
 };
 
 export function planDisable(index: ModIndex, fileNames: string[]): DisablePlan {
-  const requested = new Set(fileNames.filter((f) => index.byFileName.get(f)?.enabled === true));
+  const requested = new Set(
+    fileNames.filter((f) => index.byFileName.get(f)?.enabled === true),
+  );
   // Enabled mods not being disabled, plus everything they transitively
   // need, must survive. Requested files inside that closure are kept.
   const survivors = [...index.files]

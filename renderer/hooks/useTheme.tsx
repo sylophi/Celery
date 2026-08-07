@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import type { Theme } from "@shared/schemas";
 
 // Key must match the inline boot script in index.html.
@@ -12,7 +18,8 @@ function readStoredTheme(): Theme {
 function applyTheme(theme: Theme): void {
   const dark =
     theme === "dark" ||
-    (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    (theme === "system" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.classList.toggle("dark", dark);
   document.documentElement.style.colorScheme = dark ? "dark" : "light";
 }
@@ -43,7 +50,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     void window.api.runtime.setTheme(next);
   };
 
-  return <ThemeContext.Provider value={{ theme, setTheme }}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
 }
 
 export function useTheme(): ThemeContextValue {

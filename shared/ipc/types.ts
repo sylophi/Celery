@@ -16,7 +16,9 @@ type ClientIn<D> = D extends InvokeDef ? z.input<D["input"]> : never;
 type HandlerIn<D> = D extends InvokeDef ? z.output<D["input"]> : never;
 type Out<D> = D extends InvokeDef ? z.output<D["output"]> : never;
 
-type BroadcastSubscriberPayload<D> = D extends BroadcastDef ? z.output<D["payload"]> : never;
+type BroadcastSubscriberPayload<D> = D extends BroadcastDef
+  ? z.output<D["payload"]>
+  : never;
 
 export type BroadcastProducerPayload<
   C extends Contract,
@@ -30,7 +32,10 @@ type Args<I> = [I] extends [void] ? [] : [input: I];
 // Handlers are always called positionally as `(input, context)`; see
 // shigomori's shared/ipc/types.ts for the variance rationale.
 export type Handlers<C extends Contract, Ctx = unknown> = {
-  [K in InvokeKeys<C>]: (input: HandlerIn<C[K]>, context: Ctx) => Promise<Out<C[K]>> | Out<C[K]>;
+  [K in InvokeKeys<C>]: (
+    input: HandlerIn<C[K]>,
+    context: Ctx,
+  ) => Promise<Out<C[K]>> | Out<C[K]>;
 };
 
 export type Client<C extends Contract> = {
