@@ -425,9 +425,10 @@ export function GhostPanel({
   );
 }
 
-// The facts row under the title: enabled state, what the mod is (its
-// GameBanana category, icon-led), structural traits beyond that, and
-// warnings. Plain icon+word pairs instead of chip boxes.
+// The facts row under the title: what the mod is (its GameBanana
+// category, icon-led), structural traits beyond that, and warnings.
+// Enabled state is NOT restated here: the enable/disable button right
+// below already says it.
 function ModFacts({
   file,
   category,
@@ -438,22 +439,11 @@ function ModFacts({
   orphan: boolean;
 }) {
   const extraTags = tagsBeyondCategory(category, file.tags);
+  if (category === undefined && extraTags.length === 0 && !orphan) {
+    return null;
+  }
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px]">
-      <span
-        className={cn(
-          "inline-flex items-center gap-1",
-          file.enabled ? "text-foreground" : "text-muted-foreground",
-        )}
-      >
-        <span
-          className={cn(
-            "size-1.5 rounded-full",
-            file.enabled ? "bg-on" : "bg-muted-foreground/40",
-          )}
-        />
-        {file.enabled ? "enabled" : "disabled"}
-      </span>
       {category !== undefined && (
         <span className="inline-flex items-center gap-1 text-foreground/80">
           <ModIconGlyph
