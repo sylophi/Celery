@@ -1,39 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Celery app icon: macOS-style rounded square, flat celery stalk glyph. -->
+  <!-- Celery app icon: a dependency tree that silhouettes as a celery
+       bunch — three stalks converging into one shared base node, the
+       green "everything needs it" dependency. -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#46b478"/>
-      <stop offset="1" stop-color="#2e9159"/>
-    </linearGradient>
-    <linearGradient id="rib" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#eafbef"/>
-      <stop offset="1" stop-color="#cdeeda"/>
+      <stop offset="0" stop-color="#212121"/>
+      <stop offset="1" stop-color="#0c0c0c"/>
     </linearGradient>
   </defs>
   <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bg)"/>
 
-  <!-- leaves -->
-  <g fill="#a8e0bd">
-    <path d="M512 268 C 470 200, 380 190, 340 236 C 380 258, 420 262, 452 300 Z"/>
-    <path d="M512 268 C 554 200, 644 190, 684 236 C 644 258, 604 262, 572 300 Z"/>
-    <path d="M512 244 C 500 190, 512 150, 560 132 C 566 178, 552 216, 528 252 Z"/>
+  <!-- branches (under the nodes) -->
+  <g stroke="#f2f2f0" stroke-width="48" stroke-linecap="round">
+    <line x1="512" y1="712" x2="298" y2="330"/>
+    <line x1="512" y1="712" x2="512" y2="278"/>
+    <line x1="512" y1="712" x2="726" y2="330"/>
   </g>
 
-  <!-- side ribs, slightly splayed -->
-  <g fill="url(#rib)">
-    <path d="M362 322 c -10 -18 6 -40 30 -40 h 34 c 22 0 36 20 30 40 l -52 424 c -3 26 -40 26 -44 0 Z"
-          transform="rotate(-7 400 520)"/>
-    <path d="M568 322 c -6 -20 8 -40 30 -40 h 34 c 24 0 40 22 30 40 l -42 424 c -4 26 -41 26 -44 0 Z"
-          transform="rotate(7 624 520)"/>
+  <!-- stalk-top nodes -->
+  <g fill="#f2f2f0">
+    <circle cx="298" cy="330" r="86"/>
+    <circle cx="512" cy="278" r="86"/>
+    <circle cx="726" cy="330" r="86"/>
   </g>
 
-  <!-- center rib on top -->
-  <path fill="url(#rib)" d="M462 300 c 0 -22 18 -36 50 -36 s 50 14 50 -36 c 0 0 0 0 0 0 M462 300 c 0 -20 20 -34 50 -34 s 50 14 50 34 l -22 470 c -2 30 -54 30 -56 0 Z"/>
-
-  <!-- rib grooves -->
-  <g stroke="#8fcfa9" stroke-width="14" stroke-linecap="round" opacity="0.75">
-    <line x1="512" y1="320" x2="512" y2="700"/>
-    <line x1="404" y1="330" x2="428" y2="666" transform="rotate(-7 416 498)"/>
-    <line x1="620" y1="330" x2="596" y2="666" transform="rotate(7 608 498)"/>
-  </g>
+  <!-- the shared dependency -->
+  <circle cx="512" cy="712" r="94" fill="#31b578"/>
 </svg>
