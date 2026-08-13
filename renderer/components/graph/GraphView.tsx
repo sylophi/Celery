@@ -11,7 +11,6 @@ import {
   type Edge,
 } from "@xyflow/react";
 import type { ModIndex } from "@shared/graph";
-import type { GraphFilter } from "@/App";
 import { GhostNode, type GhostFlowNode } from "./GhostNode";
 import { ModNode, type ModFlowNode } from "./ModNode";
 import { RegionNode, type RegionFlowNode } from "./RegionNode";
@@ -49,14 +48,26 @@ const nodeTypes = {
 };
 type AnyFlowNode = ModFlowNode | GhostFlowNode | RegionFlowNode;
 
-export function GraphView(props: {
+// `visible` is what the overview lays out; `scope` is the wider set a
+// focused mod may reach into. They differ because narrowing to orphans
+// (or to a search) is a way of FINDING a mod, not a claim about what it
+// is connected to: focusing one still has to show its real context,
+// which for an orphan is usually the pile of disabled dependents that
+// explains why it is one.
+export type GraphProps = {
   index: ModIndex;
-  filter: GraphFilter;
+  scope: Set<string>;
+  visible: Set<string>;
   orphans: Set<string>;
   dependencySet: Set<string>;
+  // Whether `visible` is the orphan shortlist, which the top region
+  // labels itself after.
+  orphansOnly: boolean;
   selectedId: string | null;
   onSelect: (fileName: string | null) => void;
-}) {
+};
+
+export function GraphView(props: GraphProps) {
   return (
     <ReactFlowProvider>
       <GraphViewInner {...props} />
@@ -66,39 +77,19 @@ export function GraphView(props: {
 
 function GraphViewInner({
   index,
-  filter,
+  scope,
+  visible,
   orphans,
   dependencySet,
+  orphansOnly,
   selectedId,
   onSelect,
-}: {
-  index: ModIndex;
-  filter: GraphFilter;
-  orphans: Set<string>;
-  dependencySet: Set<string>;
-  selectedId: string | null;
-  onSelect: (fileName: string | null) => void;
-}) {
-  // The enabled filter narrows what exists as far as the graph is
-  // concerned. The orphans filter is a way of FINDING orphans, so it
-  // only trims the overview: focusing one still shows its real context
-  // (usually a pile of disabled dependents, which is the explanation).
-  const inScope = new Set(
-    (filter === "enabled"
-      ? index.files.filter((f) => f.enabled)
-      : index.files
-    ).map((f) => f.fileName),
-  );
-  const overviewSet =
-    filter === "orphans"
-      ? new Set([...inScope].filter((f) => orphans.has(f)))
-      : inScope;
-
+}: GraphProps) {
   // Missing dependencies become ghost nodes, keyed by the missing Name
   // (several mods missing the same dep share one).
   const ghostDeps = new Map<string, string[]>();
   const ghostDependents = new Map<string, string[]>();
-  for (const fileName of inScope) {
+  for (const fileName of scope) {
     for (const name of new Set(index.missing.get(fileName) ?? [])) {
       const id = GHOST_PREFIX + name;
       let deps = ghostDeps.get(fileName);
@@ -110,11 +101,11 @@ function GraphViewInner({
     }
   }
 
-  // A selection the current scope dropped (a disabled mod picked in the
-  // sidebar while the enabled filter is on) still gets focused; it is
-  // what the user asked to look at.
+  // A selection outside the current scope (a disabled mod picked while
+  // the enabled filter is on) still gets focused; it is what the user
+  // asked to look at.
   const focused =
-    selectedId !== null && (inScope.has(selectedId) || isGhostId(selectedId))
+    selectedId !== null && (scope.has(selectedId) || isGhostId(selectedId))
       ? selectedId
       : null;
 
@@ -136,18 +127,18 @@ function GraphViewInner({
     ? layoutFocus(
         index,
         focused,
-        new Set([...inScope, focused]),
+        new Set([...scope, focused]),
         dependencySet,
         ghostDeps,
         aspect,
       )
     : layoutOverview(
         index,
-        overviewSet,
+        visible,
         dependencySet,
         ghostDeps,
         aspect,
-        filter === "orphans" ? "orphans" : "mods",
+        orphansOnly ? "orphans" : "mods",
       );
   const { positions, bounds, nodes: drawn, regions, drawEdge, usedBy } = layout;
 
@@ -260,9 +251,9 @@ function GraphViewInner({
     if (paneWidth === 0 || paneHeight === 0) return;
     if (bounds.width <= 0 || bounds.height <= 0) return;
     // The pane size belongs in the key too, so resizing the window (or
-    // dragging the sidebar) reframes instead of leaving the graph
+    // switching views) reframes instead of leaving the graph
     // stranded off to one side.
-    const key = `${filter}:${focused ?? ""}:${stamp(nodes)}:${Math.round(usableWidth)}x${Math.round(usableHeight)}`;
+    const key = `${focused ?? ""}:${stamp(nodes)}:${Math.round(usableWidth)}x${Math.round(usableHeight)}`;
     if (lastFitKey.current === key) return;
     const first = lastFitKey.current === "";
     lastFitKey.current = key;
@@ -288,7 +279,6 @@ function GraphViewInner({
       { duration: first ? 0 : 320 },
     );
   }, [
-    filter,
     focused,
     nodes,
     bounds,

@@ -12,6 +12,8 @@ mods.
 
 ## Features
 
+- **Two views** over the same mods, switched from the toolbar: the dependency
+  graph, and a launcher-style grid for when you just want to find something.
 - **Dependency graph**: every top-level mod sits in its own island with the
   helpers only it uses; helpers several mods share move to a shelf below,
   labelled with how many mods want them. Select a mod and the view reshapes
@@ -20,16 +22,14 @@ mods.
   so drawing every edge at once says nothing; they are drawn where they carry
   something.
 - **Cascading toggles**: enabling a map enables its helpers; disabling a helper
-  takes its dependents down (or keeps shared ones a group member still needs).
-  Cascades apply immediately; a setting turns on preview-before-write.
-- **Groups**: store intent ("multiplayer", "skins"), not snapshots. Flipping a
-  group computes the closure at apply time.
+  takes down everything enabled that would break without it. Cascades apply
+  immediately; a setting turns on preview-before-write.
 - **Orphan detection**: enabled helpers/asset packs that no enabled mod
   references, i.e. load time spent on nothing.
 - **Mods vs dependencies**: top-level mods (the things you play) are separated
   from the infrastructure, with per-mod overrides.
 - **Favorites, structural tags** (helper / map-pack / collab / skin / audio /
-  asset-pack, derived from zip contents), search, light/dark, macOS vibrancy.
+  asset-pack, derived from zip contents), search, light/dark.
 
 ## Development
 

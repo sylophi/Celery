@@ -24,7 +24,7 @@ let mainWindow: BrowserWindow | null = null;
 // background matches `--background` so resize flashes blend in; the
 // 28px overlay matches the standard caption-button strip (shigomori's
 // win32 chrome recipe).
-function win32Colors() {
+function chromeColors() {
   const dark = nativeTheme.shouldUseDarkColors;
   return {
     backgroundColor: dark ? "#171717" : "#ffffff",
@@ -38,30 +38,26 @@ function win32Colors() {
 
 const createWindow = () => {
   // Drive the native appearance from the saved theme before constructing
-  // the window so the macOS vibrancy material first-paints the right
-  // light/dark variant. "system" delegates back to the OS.
+  // the window so the shell first-paints the right light/dark variant.
+  // "system" delegates back to the OS.
   nativeTheme.themeSource = readThemeSync();
   mainWindow = new BrowserWindow({
     width: 1160,
     height: 720,
     minWidth: 800,
     minHeight: 520,
-    // macOS chrome: inset traffic lights over a transparent shell so the
-    // NSVisualEffectView material shows through where the renderer
-    // paints no background (the sidebar column).
+    // macOS chrome: inset traffic lights over the app's own toolbar.
     ...(isMac
       ? {
           titleBarStyle: "hiddenInset" as const,
           trafficLightPosition: { x: 16, y: 18 },
-          backgroundColor: "#00000000",
-          vibrancy: "sidebar" as const,
-          visualEffectState: "active" as const,
+          backgroundColor: chromeColors().backgroundColor,
         }
       : isWindows
         ? {
             titleBarStyle: "hidden" as const,
-            titleBarOverlay: win32Colors().overlay,
-            backgroundColor: win32Colors().backgroundColor,
+            titleBarOverlay: chromeColors().overlay,
+            backgroundColor: chromeColors().backgroundColor,
             // Without this Electron still draws the menu-bar row in the
             // client area despite the hidden title bar; Alt reveals it.
             autoHideMenuBar: true,
@@ -94,16 +90,14 @@ const createWindow = () => {
   attachContextMenu(mainWindow);
 };
 
-// AppKit re-tints the vibrancy material on nativeTheme changes on its
-// own; Windows chrome needs a manual nudge.
-if (isWindows) {
-  nativeTheme.on("updated", () => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    const { backgroundColor, overlay } = win32Colors();
-    mainWindow.setBackgroundColor(backgroundColor);
-    mainWindow.setTitleBarOverlay?.(overlay);
-  });
-}
+// The window's own background is what shows during a resize, before the
+// renderer repaints, so it has to follow the theme too.
+nativeTheme.on("updated", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const { backgroundColor, overlay } = chromeColors();
+  mainWindow.setBackgroundColor(backgroundColor);
+  if (isWindows) mainWindow.setTitleBarOverlay?.(overlay);
+});
 
 app.on("ready", async () => {
   await ensureCeleryRoot();

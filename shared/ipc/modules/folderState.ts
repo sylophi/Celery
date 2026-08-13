@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { invoke } from "../contract";
-import { FolderStateSchema } from "../../schemas/groups";
+import { FolderStateSchema } from "../../schemas/folderState";
 
-// Per-folder app state (groups, section overrides), keyed by Mods
+// Per-folder app state (section overrides), keyed by Mods
 // folder path so a second install keeps separate intents. Whole-object
 // save keeps the contract trivial; the state is tiny.
 export const folderStateContract = {

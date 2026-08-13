@@ -41,7 +41,7 @@
   /* Domain tokens: chrome stays monochrome; color lives in the graph.
      Each colored token defends its exception. */
   /* Enabled state is the one thing worth a hue everywhere it appears
-     (node dot, sidebar dot, group meter): green reads as "loaded" at a
+     (node dot, tile dot): green reads as "loaded" at a
      glance, and it's celery. */
   --on: oklch(0.66 0.15 155);
   /* Hard dependency edges: deliberately faint. With collab mods
@@ -66,8 +66,8 @@
 
 .dark {
   /* Canvas lifted one step above pure-black neutral-950 so it reads
-     less heavy against the vibrancy-blurred sidebar; card/popover sit a
-     step above the canvas so floating surfaces still elevate. */
+     less heavy; card/popover sit a step above the canvas so floating
+     surfaces still elevate. */
   --background: var(--color-neutral-900);
   --foreground: var(--color-neutral-50);
   --card: oklch(0.245 0 0);
@@ -136,10 +136,7 @@
   }
   html,
   body {
-    /* Stays transparent so the BrowserWindow vibrancy material shows
-       through under the sidebar. The main pane paints its own opaque
-       `bg-background`. */
-    background: transparent;
+    background: var(--background);
   }
   body {
     @apply font-sans text-foreground antialiased;
@@ -156,29 +153,6 @@
   [data-disabled],
   [aria-disabled="true"] {
     cursor: not-allowed;
-  }
-
-  /* Token overrides scoped to the vibrancy sidebar surface: the global
-     muted/accent shades are tuned for an opaque background and read
-     washed-out / sticker-like over the NSVisualEffectView material. */
-  [data-sidebar] {
-    --muted-foreground: var(--color-neutral-600);
-    --accent: oklch(0 0 0 / 0.06);
-  }
-  .dark [data-sidebar] {
-    --muted-foreground: var(--color-neutral-300);
-    --accent: oklch(1 0 0 / 0.1);
-  }
-
-  /* Non-mac platforms have no vibrancy material behind the transparent
-     sidebar, so it paints its own quiet opaque surface. */
-  [data-platform="win32"] [data-sidebar],
-  [data-platform="linux"] [data-sidebar] {
-    background: var(--color-neutral-100);
-  }
-  [data-platform="win32"].dark [data-sidebar],
-  [data-platform="linux"].dark [data-sidebar] {
-    background: oklch(0.235 0 0);
   }
 
   /* Windows draws classic always-visible scrollbars; restyle them into

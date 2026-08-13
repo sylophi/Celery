@@ -46,7 +46,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (next: Theme) => {
     setThemeState(next);
     localStorage.setItem(THEME_STORAGE_KEY, next);
-    // Mirror into main so nativeTheme (vibrancy material) follows.
+    // Mirror into main so nativeTheme (native window chrome) follows.
     void window.api.runtime.setTheme(next);
   };
 

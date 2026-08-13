@@ -7,8 +7,6 @@ import {
   XIcon,
 } from "lucide-react";
 import type {
-  FolderState,
-  Group,
   ModFile,
   RemoteModInfo,
   RemoteProgress,
@@ -39,7 +37,6 @@ export function DetailPanel({
   file,
   index,
   orphan,
-  folderState,
   dependencySet,
   folder,
   onSelect,
@@ -49,7 +46,6 @@ export function DetailPanel({
   file: ModFile;
   index: ModIndex;
   orphan: boolean;
-  folderState: FolderState;
   dependencySet: Set<string>;
   folder: string;
   onSelect: (fileName: string) => void;
@@ -58,7 +54,6 @@ export function DetailPanel({
 }) {
   const setFavorite = useSetFavorite();
   const saveState = useSaveFolderState(folder);
-  const groups = folderState.groups;
 
   const overview = useRemoteOverview();
   const remoteStatus = overview.data?.byFile[file.fileName];
@@ -86,8 +81,9 @@ export function DetailPanel({
   const missing = index.missing.get(file.fileName) ?? [];
   const version = file.entries[0]?.version;
 
-  // List placement: the default follows hard dependents; picking the
-  // other side stores an override, picking the default clears it.
+  // Which side of the mods/dependencies split this lands on, in both
+  // views: the default follows hard dependents; picking the other side
+  // stores an override, picking the default clears it.
   const defaultSection: ModSection =
     dependents.length > 0 ? "dependency" : "mod";
   const effectiveSection: ModSection = dependencySet.has(file.fileName)
@@ -100,22 +96,6 @@ export function DetailPanel({
       else overrides[file.fileName] = section;
       return { ...state, sectionOverrides: overrides };
     });
-  };
-
-  const toggleMembership = (group: Group) => {
-    saveState.mutate((state) => ({
-      ...state,
-      groups: state.groups.map((g) =>
-        g.id === group.id
-          ? {
-              ...g,
-              members: g.members.includes(file.fileName)
-                ? g.members.filter((m) => m !== file.fileName)
-                : [...g.members, file.fileName],
-            }
-          : g,
-      ),
-    }));
   };
 
   return (
@@ -289,7 +269,7 @@ export function DetailPanel({
         )}
         <div className="mb-3">
           <h3 className="mb-1 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-            list placement
+            treated as
           </h3>
           <SegmentedControl<ModSection>
             options={[
@@ -326,34 +306,6 @@ export function DetailPanel({
               </li>
             ))}
           </Section>
-        )}
-        {groups.length > 0 && (
-          <div className="mb-1">
-            <h3 className="mb-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-              groups
-            </h3>
-            <div className="flex flex-wrap gap-1">
-              {groups.map((group) => {
-                const member = group.members.includes(file.fileName);
-                return (
-                  <button
-                    key={group.id}
-                    type="button"
-                    aria-pressed={member}
-                    onClick={() => toggleMembership(group)}
-                    className={cn(
-                      "cursor-pointer rounded-md border border-border px-2 py-1 text-xs transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                      member
-                        ? "bg-secondary text-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    {group.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
         )}
       </div>
     </div>

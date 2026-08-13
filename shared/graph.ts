@@ -156,8 +156,9 @@ export type DisablePlan = {
   // Enabled mods (outside the targets) that hard-depend, transitively,
   // on something being disabled; they'd break unless disabled too.
   brokenDependents: string[];
-  // Group semantics: members that stay enabled because an enabled mod
-  // outside the group still needs them.
+  // Requested mods that stay enabled because an enabled mod outside the
+  // request still needs them. Disabling one anyway means taking those
+  // dependents down with it.
   kept: string[];
 };
 

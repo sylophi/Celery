@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FolderOpenIcon, RefreshCwIcon, Settings2Icon } from "lucide-react";
+import { FolderOpenIcon } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   dependentClosure,
@@ -8,14 +8,23 @@ import {
   planEnable,
 } from "@shared/graph";
 import { Button } from "@/components/ui/button";
-import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ConfirmDialog, type PendingAction } from "@/components/ConfirmDialog";
 import { DetailPanel, GhostPanel } from "@/components/DetailPanel";
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
+import {
+  isSortMode,
+  ListView,
+  type SortMode,
+} from "@/components/list/ListView";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { Sidebar } from "@/components/sidebar/Sidebar";
 import { StatusPill, type Status } from "@/components/StatusPill";
+import {
+  StatusBar,
+  Toolbar,
+  type Filter,
+  type View,
+} from "@/components/Toolbar";
 import { EMPTY_FOLDER_STATE } from "@shared/schemas";
 import {
   useConfig,
@@ -24,14 +33,12 @@ import {
   useMods,
   useSetEnabled,
 } from "@/hooks/useMods";
+import { useRemoteOverview } from "@/hooks/useRemote";
 import { queryKeys } from "@/lib/queryKeys";
-import { cn, displayName, dragRegion } from "@/lib/utils";
+import { displayName, dragRegion } from "@/lib/utils";
 
-export type GraphFilter = "all" | "enabled" | "orphans";
-
-// Windows overlays native caption buttons over the top-right 28px of
-// the client area; keep the toolbar's own controls clear of them.
-const isWindows = window.api.platform === "win32";
+const VIEW_STORAGE_KEY = "celery.view";
+const SORT_STORAGE_KEY = "celery.sortMode";
 
 export function App() {
   const queryClient = useQueryClient();
@@ -42,40 +49,40 @@ export function App() {
   const folderStateQuery = useFolderState(folder);
   const folderState = folderStateQuery.data ?? EMPTY_FOLDER_STATE;
   const setEnabled = useSetEnabled();
+  const overview = useRemoteOverview(Boolean(folder));
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<GraphFilter>("all");
+  const [view, setView] = useState<View>(() =>
+    localStorage.getItem(VIEW_STORAGE_KEY) === "list" ? "list" : "graph",
+  );
+  const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<SortMode>(() => {
+    const stored = localStorage.getItem(SORT_STORAGE_KEY);
+    return isSortMode(stored) ? stored : "name";
+  });
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [status, setStatus] = useState<Status | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Resizable sidebar, persisted across sessions.
-  const [sidebarWidth, setSidebarWidth] = useState(() => {
-    const stored = Number(localStorage.getItem("celery.sidebarWidth"));
-    return Number.isFinite(stored) && stored >= 180 && stored <= 420
-      ? stored
-      : 240;
-  });
-  const startSidebarResize = (event: React.MouseEvent) => {
-    event.preventDefault();
-    const startX = event.clientX;
-    const startWidth = sidebarWidth;
-    let width = startWidth;
-    const onMove = (move: MouseEvent) => {
-      width = Math.min(420, Math.max(180, startWidth + move.clientX - startX));
-      setSidebarWidth(width);
-    };
-    const onUp = () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-      localStorage.setItem("celery.sidebarWidth", String(width));
-    };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+  const changeView = (next: View) => {
+    setView(next);
+    localStorage.setItem(VIEW_STORAGE_KEY, next);
+  };
+  const changeSort = (next: SortMode) => {
+    setSort(next);
+    localStorage.setItem(SORT_STORAGE_KEY, next);
   };
 
   const orphans = index ? new Set(findOrphans(index)) : new Set<string>();
+  const updates = new Set(
+    Object.entries(overview.data?.byFile ?? {})
+      .filter(([, remote]) => remote.updateAvailable)
+      .map(([fileName]) => fileName),
+  );
+  const categoryOf = (fileName: string) =>
+    overview.data?.byFile[fileName]?.category;
 
   // Which mods count as "dependencies" (vs top-level mods you play):
   // hard dependents only (a mod that is merely optionally referenced
@@ -89,12 +96,30 @@ export function App() {
     if (section === "dependency") dependencySet.add(file.fileName);
   }
 
+  // Two sets, because narrowing means two different things. `scope` is
+  // what exists at all right now; `visible` is what the views show,
+  // narrowed further to the orphan shortlist or a search. The graph
+  // needs both: it lays out `visible`, but a focused mod reaches into
+  // `scope` for its real context.
+  const query = search.trim().toLowerCase();
+  const scope = (index?.files ?? []).filter(
+    (file) => filter !== "enabled" || file.enabled,
+  );
+  const visible = scope.filter((file) => {
+    if (filter === "orphans" && !orphans.has(file.fileName)) return false;
+    if (query === "") return true;
+    return (
+      file.fileName.toLowerCase().includes(query) ||
+      file.entries.some((entry) => entry.name.toLowerCase().includes(query))
+    );
+  });
+
   // `/` focuses search, Escape clears the selection. Skipped while
   // typing or while a dialog ([data-popup]) is open.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, [data-popup]")) return;
+      if (target?.closest("input, textarea, select, [data-popup]")) return;
       // A dialog can be open while focus sits outside it (opened by
       // mouse click); Escape must close only the dialog, not also
       // clear the selection behind it.
@@ -134,17 +159,13 @@ export function App() {
   };
 
   // Dependency-aware toggling. Enabling pulls in the disabled part of
-  // the hard-dep closure. Disabling a single mod takes its enabled
-  // dependents down too; disabling a group keeps members an enabled
-  // outsider still needs. Cascades apply immediately by default (the
+  // the hard-dep closure; disabling takes down everything enabled that
+  // would break without it. Cascades apply immediately by default (the
   // status pill reports what happened) unless the confirm-cascades
   // setting routes them through the preview dialog first.
-  const requestToggle = (
-    fileNames: string[],
-    enable: boolean,
-    label: string,
-  ) => {
+  const requestToggle = (fileName: string, enable: boolean) => {
     if (!index) return;
+    const label = displayName(fileName);
     const confirm = configQuery.data?.confirmCascades ?? false;
     const run = (
       changes: { fileName: string; enabled: boolean }[],
@@ -160,60 +181,45 @@ export function App() {
     };
 
     if (enable) {
-      const plan = planEnable(index, fileNames);
-      const changes = [...plan.targets, ...plan.cascade].map((fileName) => ({
-        fileName,
+      const plan = planEnable(index, [fileName]);
+      const changes = [...plan.targets, ...plan.cascade].map((f) => ({
+        fileName: f,
         enabled: true,
       }));
-      const message =
+      run(
+        changes,
         plan.cascade.length > 0
           ? `enabled ${label} + ${plan.cascade.length} dependencies`
-          : `enabled ${label}`;
-      run(changes, message, {
-        title: "enable dependencies too?",
-        sections: [{ label: "needs these disabled mods", items: plan.cascade }],
-        confirmLabel: `enable ${changes.length} mods`,
-      });
-      return;
-    }
-
-    const plan = planDisable(index, fileNames);
-    if (plan.targets.length === 0 && plan.kept.length > 0) {
-      // Everything requested is still needed by enabled outsiders: a
-      // single-mod disable takes those dependents down with it.
-      const forced = [...dependentClosure(index, plan.kept)]
-        .filter((f) => index.byFileName.get(f)?.enabled)
-        .toSorted();
-      const dependents = forced.filter((f) => !fileNames.includes(f));
-      run(
-        forced.map((fileName) => ({ fileName, enabled: false })),
-        `disabled ${label} + ${dependents.length} dependents`,
+          : `enabled ${label}`,
         {
-          title: "disable dependents too?",
+          title: "enable dependencies too?",
           sections: [
-            { label: "these enabled mods need it", items: dependents },
+            { label: "needs these disabled mods", items: plan.cascade },
           ],
-          confirmLabel: `disable ${forced.length} mods`,
+          confirmLabel: `enable ${changes.length} mods`,
         },
       );
       return;
     }
-    const message =
-      plan.kept.length > 0
-        ? `disabled ${label}, kept ${plan.kept.length} shared`
-        : `disabled ${label}`;
+
+    // `planDisable` reports this mod as kept when something enabled
+    // still needs it; disabling it anyway means taking those dependents
+    // down as well.
+    const plan = planDisable(index, [fileName]);
+    if (plan.targets.length === 0 && plan.kept.length === 0) return;
+    const forced = [...dependentClosure(index, [fileName])]
+      .filter((f) => index.byFileName.get(f)?.enabled)
+      .toSorted();
+    const dependents = forced.filter((f) => f !== fileName);
     run(
-      plan.targets.map((fileName) => ({ fileName, enabled: false })),
-      message,
+      forced.map((f) => ({ fileName: f, enabled: false })),
+      dependents.length > 0
+        ? `disabled ${label} + ${dependents.length} dependents`
+        : `disabled ${label}`,
       {
-        title: "some mods stay on",
-        sections: [
-          {
-            label: "kept on: still needed by enabled mods outside the group",
-            items: plan.kept,
-          },
-        ],
-        confirmLabel: `disable ${plan.targets.length} mods`,
+        title: "disable dependents too?",
+        sections: [{ label: "these enabled mods need it", items: dependents }],
+        confirmLabel: `disable ${forced.length} mods`,
       },
     );
   };
@@ -222,206 +228,128 @@ export function App() {
     selectedId && index ? (index.byFileName.get(selectedId) ?? null) : null;
   const selectedGhost =
     selectedId && isGhostId(selectedId) ? ghostName(selectedId) : null;
-  const enabledCount =
-    modsQuery.data?.files.filter((f) => f.enabled).length ?? 0;
-  const totalCount = modsQuery.data?.files.length ?? 0;
 
   return (
-    <div className="flex h-dvh overflow-hidden text-foreground">
-      <div style={{ width: sidebarWidth }} className="shrink-0">
-        <Sidebar
-          files={modsQuery.data?.files ?? []}
-          folderState={folderState}
-          folder={folder}
-          index={index}
-          orphans={orphans}
-          dependencySet={dependencySet}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          onToggleGroup={(group, enable) =>
-            requestToggle(group.members, enable, group.name)
-          }
-          searchRef={searchRef}
-        />
-      </div>
-      {/* ARIA window-splitter pattern: a focusable separator that also
-          resizes with arrow keys. The rule can't see that the role
-          makes this the sanctioned interactive-separator widget. */}
-      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="resize sidebar"
-        tabIndex={0}
-        onMouseDown={startSidebarResize}
-        onKeyDown={(event) => {
-          const delta =
-            event.key === "ArrowLeft"
-              ? -16
-              : event.key === "ArrowRight"
-                ? 16
-                : 0;
-          if (delta === 0) return;
-          event.preventDefault();
-          setSidebarWidth((width) => {
-            const next = Math.min(420, Math.max(180, width + delta));
-            localStorage.setItem("celery.sidebarWidth", String(next));
-            return next;
-          });
-        }}
-        className="relative w-px shrink-0 cursor-col-resize bg-border outline-none focus-visible:bg-ring"
-      >
-        <div className="absolute inset-y-0 -left-1 z-10 w-2" />
-      </div>
-      <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background">
-        {folder ? (
-          <>
-            <header
-              className={cn(
-                "z-40 flex h-12 shrink-0 items-center gap-3 border-b border-border px-4",
-                isWindows && "pr-[150px]",
-              )}
-              style={dragRegion("drag")}
-            >
-              <div style={dragRegion("no-drag")}>
-                <SegmentedControl<GraphFilter>
-                  options={[
-                    { value: "all", label: "all", selected: filter === "all" },
-                    {
-                      value: "enabled",
-                      label: "enabled",
-                      selected: filter === "enabled",
-                    },
-                    {
-                      value: "orphans",
-                      label: `orphans${orphans.size > 0 ? ` ${orphans.size}` : ""}`,
-                      selected: filter === "orphans",
-                    },
-                  ]}
-                  onSelect={setFilter}
-                />
-              </div>
-              <span className="tabular text-xs text-muted-foreground/70">
-                {totalCount} mods, {enabledCount} enabled
-              </span>
-              <div className="flex-1" />
-              <div
-                className="flex items-center gap-1"
-                style={dragRegion("no-drag")}
-              >
+    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      {folder ? (
+        <>
+          <Toolbar
+            view={view}
+            onView={changeView}
+            filter={filter}
+            onFilter={setFilter}
+            orphanCount={orphans.size}
+            search={search}
+            onSearch={setSearch}
+            searchRef={searchRef}
+            sort={sort}
+            onSort={changeSort}
+            rescanning={modsQuery.isFetching}
+            onRescan={() => {
+              // Files may have changed under us, and update-badge state
+              // depends on their hashes, so refresh both.
+              void queryClient.invalidateQueries({ queryKey: queryKeys.mods });
+              void queryClient.invalidateQueries({
+                queryKey: queryKeys.remoteOverview,
+              });
+            }}
+            onSettings={() => setSettingsOpen(true)}
+          />
+          <main className="relative min-h-0 flex-1">
+            {modsQuery.isLoading ? (
+              <ScanProgress />
+            ) : modsQuery.isError ? (
+              <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+                <p className="max-w-md text-xs text-destructive">
+                  couldn't read the mods folder:{" "}
+                  {modsQuery.error instanceof Error
+                    ? modsQuery.error.message
+                    : String(modsQuery.error)}
+                </p>
                 <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="rescan mods folder"
-                  title="rescan mods folder"
-                  disabled={modsQuery.isFetching}
-                  onClick={() => {
-                    // Files may have changed under us, and update-badge
-                    // state depends on their hashes, so refresh both.
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
                     void queryClient.invalidateQueries({
                       queryKey: queryKeys.mods,
-                    });
-                    void queryClient.invalidateQueries({
-                      queryKey: queryKeys.remoteOverview,
-                    });
-                  }}
+                    })
+                  }
                 >
-                  <RefreshCwIcon
-                    className={
-                      modsQuery.isFetching ? "animate-spin" : undefined
-                    }
-                  />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="settings"
-                  title="settings"
-                  onClick={() => setSettingsOpen(true)}
-                >
-                  <Settings2Icon />
+                  try again
                 </Button>
               </div>
-            </header>
-            <div className="relative min-h-0 flex-1">
-              {modsQuery.isLoading ? (
-                <ScanProgress />
-              ) : modsQuery.isError ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-                  <p className="max-w-md text-xs text-destructive">
-                    couldn't read the mods folder:{" "}
-                    {modsQuery.error instanceof Error
-                      ? modsQuery.error.message
-                      : String(modsQuery.error)}
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      void queryClient.invalidateQueries({
-                        queryKey: queryKeys.mods,
-                      })
-                    }
-                  >
-                    try again
-                  </Button>
-                </div>
-              ) : (
-                index && (
-                  <GraphView
-                    index={index}
-                    filter={filter}
-                    orphans={orphans}
-                    dependencySet={dependencySet}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                  />
-                )
-              )}
-              {selectedGhost && index && (
-                <GhostPanel
-                  name={selectedGhost}
+            ) : (
+              index &&
+              (view === "graph" ? (
+                <GraphView
                   index={index}
-                  onSelect={setSelectedId}
-                  onClose={() => setSelectedId(null)}
-                />
-              )}
-              {selectedFile && index && (
-                <DetailPanel
-                  file={selectedFile}
-                  index={index}
-                  orphan={orphans.has(selectedFile.fileName)}
-                  folderState={folderState}
+                  scope={new Set(scope.map((f) => f.fileName))}
+                  visible={new Set(visible.map((f) => f.fileName))}
+                  orphans={orphans}
                   dependencySet={dependencySet}
-                  folder={folder}
+                  orphansOnly={filter === "orphans"}
+                  selectedId={selectedId}
                   onSelect={setSelectedId}
-                  onClose={() => setSelectedId(null)}
-                  onToggle={(enable) =>
-                    requestToggle(
-                      [selectedFile.fileName],
-                      enable,
-                      displayName(selectedFile.fileName),
-                    )
-                  }
                 />
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <div
-              aria-hidden
-              className="absolute inset-x-0 top-0 z-30 h-7"
-              style={dragRegion("drag")}
-            />
-            <Onboarding
-              // Invalidate everything: the mods query has already
-              // cached an empty snapshot from before a folder existed.
-              onPicked={() => void queryClient.invalidateQueries()}
-            />
-          </>
-        )}
-      </main>
+              ) : (
+                <ListView
+                  files={visible}
+                  sort={sort}
+                  orphans={orphans}
+                  updates={updates}
+                  index={index}
+                  dependencySet={dependencySet}
+                  categoryOf={categoryOf}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
+              ))
+            )}
+            {selectedGhost && index && (
+              <GhostPanel
+                name={selectedGhost}
+                index={index}
+                onSelect={setSelectedId}
+                onClose={() => setSelectedId(null)}
+              />
+            )}
+            {selectedFile && index && (
+              <DetailPanel
+                file={selectedFile}
+                index={index}
+                orphan={orphans.has(selectedFile.fileName)}
+                dependencySet={dependencySet}
+                folder={folder}
+                onSelect={setSelectedId}
+                onClose={() => setSelectedId(null)}
+                onToggle={(enable) =>
+                  requestToggle(selectedFile.fileName, enable)
+                }
+              />
+            )}
+          </main>
+          <StatusBar
+            folder={folder}
+            total={modsQuery.data?.files.length ?? 0}
+            enabled={modsQuery.data?.files.filter((f) => f.enabled).length ?? 0}
+            updates={updates.size}
+            orphans={orphans.size}
+          />
+        </>
+      ) : (
+        <div className="relative flex flex-1 flex-col">
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 z-30 h-7"
+            style={dragRegion("drag")}
+          />
+          <Onboarding
+            // Invalidate everything: the mods query has already cached
+            // an empty snapshot from before a folder existed.
+            onPicked={() => void queryClient.invalidateQueries()}
+          />
+        </div>
+      )}
 
       <ConfirmDialog
         pending={pending}
