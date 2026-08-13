@@ -15,7 +15,6 @@ import type {
   Section as ModSection,
 } from "@shared/schemas";
 import type { ModIndex } from "@shared/graph";
-import { displayName } from "@/App";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useSaveFolderState, useSetFavorite } from "@/hooks/useMods";
@@ -28,7 +27,7 @@ import {
   useUpdateMod,
 } from "@/hooks/useRemote";
 import { ModIconGlyph, TagIconGlyph, tagsBeyondCategory } from "@/lib/modIcons";
-import { cn, formatBytes } from "@/lib/utils";
+import { cn, displayName, formatBytes } from "@/lib/utils";
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;

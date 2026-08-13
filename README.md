@@ -2,8 +2,8 @@
 
 Dependency-aware mod manager for [Celeste](https://www.celestegame.com/) /
 [Everest](https://everestapi.github.io/). Instead of a flat list, Celery shows
-your mods as a graph (collabs and maps on top, the helpers they pull in below),
-and toggling a mod carries its dependency closure with it.
+each mod grouped with the helpers it pulls in, and toggling a mod carries its
+dependency closure with it.
 
 Celery reads and writes Everest's own files (`blacklist.txt`, `favorites.txt`,
 the `everest.yaml` manifests inside each mod zip), so the in-game Toggle Mods
@@ -12,9 +12,13 @@ mods.
 
 ## Features
 
-- **Dependency graph**: layered view of every installed mod; select one to
-  light up what it needs and what needs it. Optional dependencies drawn dashed,
-  on demand.
+- **Dependency graph**: every top-level mod sits in its own island with the
+  helpers only it uses; helpers several mods share move to a shelf below,
+  labelled with how many mods want them. Select a mod and the view reshapes
+  around it: what needs it above, what it needs below, arrows and all.
+  A typical folder has a handful of collabs pulling in most of a shared pool,
+  so drawing every edge at once says nothing; they are drawn where they carry
+  something.
 - **Cascading toggles**: enabling a map enables its helpers; disabling a helper
   takes its dependents down (or keeps shared ones a group member still needs).
   Cascades apply immediately; a setting turns on preview-before-write.

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { displayName } from "@/App";
+import { displayName } from "@/lib/utils";
 
 export type PendingAction = {
   title: string;

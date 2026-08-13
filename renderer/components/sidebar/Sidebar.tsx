@@ -2,13 +2,12 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { ArrowUpDownIcon, PlusIcon, StarIcon } from "lucide-react";
 import type { FolderState, Group, ModFile } from "@shared/schemas";
 import type { ModIndex } from "@shared/graph";
-import { displayName } from "@/App";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useSaveFolderState, useSetFavorite } from "@/hooks/useMods";
 import { useRemoteOverview } from "@/hooks/useRemote";
 import { ModIconGlyph } from "@/lib/modIcons";
-import { cn, dragRegion } from "@/lib/utils";
+import { cn, displayName, dragRegion } from "@/lib/utils";
 
 const isMac = window.api.platform === "darwin";
 

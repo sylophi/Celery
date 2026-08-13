@@ -1,8 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { StarIcon } from "lucide-react";
 import type { ModFile } from "@shared/schemas";
-import { displayName } from "@/App";
-import { cn } from "@/lib/utils";
+import { cn, displayName } from "@/lib/utils";
 
 export type ModNodeData = {
   file: ModFile;
@@ -11,6 +10,10 @@ export type ModNodeData = {
   // True when something depends on this mod: dependencies render as
   // compact pills, distinct from the card shape of top-level mods.
   hasDependents: boolean;
+  // How many top-level mods pull this one in, for helpers sitting on the
+  // shared shelf. The overview draws no edges up to them, so the count
+  // is what carries "lots of things need this".
+  usedBy?: number;
 };
 export type ModFlowNode = Node<ModNodeData, "mod">;
 
@@ -23,9 +26,16 @@ export function nodeHeight(isDependency: boolean): number {
   return isDependency ? PILL_HEIGHT : CARD_HEIGHT;
 }
 
-export function nodeWidth(label: string, isDependency: boolean): number {
+// `badge` reserves room for the use count on a shared helper, so the
+// label truncates at the same place with or without one.
+export function nodeWidth(
+  label: string,
+  isDependency: boolean,
+  badge = false,
+): number {
   return isDependency
-    ? Math.min(210, Math.max(90, Math.round(label.length * 6.1) + 44))
+    ? Math.min(210, Math.max(90, Math.round(label.length * 6.1) + 44)) +
+        (badge ? 18 : 0)
     : Math.min(240, Math.max(130, Math.round(label.length * 6.6) + 58));
 }
 
@@ -58,6 +68,14 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
         >
           {name}
         </span>
+        {data.usedBy !== undefined && data.usedBy > 1 && (
+          <span
+            title={`${data.usedBy} mods need this`}
+            className="tabular shrink-0 rounded-full bg-muted px-1 text-[9px] text-muted-foreground"
+          >
+            {data.usedBy}
+          </span>
+        )}
         {file.favorite && (
           <StarIcon className="size-2.5 shrink-0 fill-current text-muted-foreground" />
         )}

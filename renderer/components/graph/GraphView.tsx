@@ -6,369 +6,48 @@ import {
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
-  useNodesInitialized,
   useReactFlow,
+  useStore,
   type Edge,
 } from "@xyflow/react";
 import type { ModIndex } from "@shared/graph";
-import { depClosure, dependentClosure } from "@shared/graph";
 import type { GraphFilter } from "@/App";
-import { displayName } from "@/App";
 import { GhostNode, type GhostFlowNode } from "./GhostNode";
-import { ModNode, nodeHeight, nodeWidth, type ModFlowNode } from "./ModNode";
+import { ModNode, type ModFlowNode } from "./ModNode";
+import { RegionNode, type RegionFlowNode } from "./RegionNode";
+import {
+  GHOST_PREFIX,
+  ghostName,
+  isGhostId,
+  layoutFocus,
+  layoutOverview,
+} from "./layout";
 
-const nodeTypes = { mod: ModNode, ghost: GhostNode };
-type AnyFlowNode = ModFlowNode | GhostFlowNode;
+// What the graph has to keep clear of: the minimap in the bottom-left
+// corner, and the `w-72` detail panel down the right whenever something
+// is selected. Clearing the minimap's height also clears its width, so
+// no left gutter is reserved for it.
+const EDGE_PAD = 20;
+const MINIMAP_CLEARANCE = 116;
+const PANEL_INSET = 312;
 
-// Missing dependencies appear as ghost nodes. Their ids live in the
-// same string space as fileNames, namespaced by this prefix.
-export const GHOST_PREFIX = "missing:";
-export const isGhostId = (id: string): boolean => id.startsWith(GHOST_PREFIX);
-export const ghostName = (id: string): string => id.slice(GHOST_PREFIX.length);
+const MIN_ZOOM = 0.05;
+const MAX_ZOOM = 1.5;
+// The overview is dense enough that natural size is already the right
+// size; a focus view holds few nodes, so it may zoom right in.
+const OVERVIEW_MAX_ZOOM = 1.2;
 
-// Ownership layout. Connected components (hard+optional edges,
-// undirected) become separate clusters. Inside each, every root mod is
-// a BLOCK: the root on top with the dependencies only it reaches
-// stacked beneath, while dependencies shared between roots form a
-// common foundation of depth bands below all blocks, so the only
-// long edges are the genuinely shared ones. Blocks order by how much
-// foundation they use (heavy sharers sink next to it). Clusters pack
-// largest-first; singletons form a compact strip. Missing deps join as
-// dashed ghost nodes wherever their dependents put them.
-const BAND_MAX_WIDTH = 1700;
-const SLOT_GAP_X = 14;
-const ROW_GAP_Y = 16;
-const BAND_GAP = 72;
-const CLUSTER_GAP_X = 110;
-const CLUSTER_GAP_Y = 140;
-const SINGLETON_GAP_X = 24;
-const PACK_MAX_WIDTH = 3200;
+// Cheap identity for a node set: enough to tell one rendered graph from
+// the next without rebuilding a full id list on every store update.
+const stamp = (list: { id: string }[]) =>
+  `${list.length}:${list[0]?.id ?? ""}:${list.at(-1)?.id ?? ""}`;
 
-type NodePos = { x: number; y: number; width: number; height: number };
-
-const byName = (a: string, b: string) =>
-  a.toLowerCase().localeCompare(b.toLowerCase());
-
-function layoutPositions(
-  index: ModIndex,
-  visible: Set<string>,
-  dependencySet: Set<string>,
-  // fileName -> ghost ids of its missing deps. Ghosts join the layout
-  // as ordinary dependency-shaped nodes: an exclusive missing dep sits
-  // inside its dependent's block, a shared one in the foundation.
-  ghostDeps: Map<string, string[]>,
-): Map<string, NodePos> {
-  // Union of hard+optional dependency edges restricted to the visible
-  // set, plus the reverse map. STRUCTURE (blocks, ownership, depth
-  // bands) follows hard edges only: an optional reference must not
-  // swallow a whole subtree into one root's block (StrawberryJam is not
-  // "part of" BreezeContest because a Breeze sub-mod optionally uses
-  // it). This also makes graph roots line up with the sidebar's "mods"
-  // section, which classifies by hard dependents.
-  const depsOf = new Map<string, Set<string>>();
-  const dependentsOf = new Map<string, Set<string>>();
-  // Optional edges still count for component GROUPING, so optionally-
-  // linked blocks land in the same cluster, near each other.
-  const unionNeighbors = new Map<string, Set<string>>();
-  const allGhosts = new Set<string>();
-  for (const fileName of visible) {
-    const deps = new Set<string>();
-    for (const to of index.hardDeps.get(fileName) ?? []) {
-      if (visible.has(to)) deps.add(to);
-    }
-    for (const ghost of ghostDeps.get(fileName) ?? []) {
-      deps.add(ghost);
-      allGhosts.add(ghost);
-    }
-    depsOf.set(fileName, deps);
-    const neighbors = new Set<string>(deps);
-    for (const to of index.optionalDeps.get(fileName) ?? []) {
-      if (visible.has(to)) neighbors.add(to);
-    }
-    unionNeighbors.set(fileName, neighbors);
-    for (const to of deps) {
-      let set = dependentsOf.get(to);
-      if (!set) dependentsOf.set(to, (set = new Set()));
-      set.add(fileName);
-    }
-  }
-  for (const ghost of allGhosts) depsOf.set(ghost, new Set());
-  for (const [from, neighbors] of unionNeighbors) {
-    for (const to of neighbors) {
-      let set = unionNeighbors.get(to);
-      if (!set) unionNeighbors.set(to, (set = new Set()));
-      set.add(from);
-    }
-  }
-
-  // Connected components over the undirected edge union.
-  const componentOf = new Map<string, number>();
-  const components: string[][] = [];
-  for (const start of visible) {
-    if (componentOf.has(start)) continue;
-    const id = components.length;
-    const nodes: string[] = [];
-    const queue = [start];
-    componentOf.set(start, id);
-    while (queue.length > 0) {
-      const current = queue.pop()!;
-      nodes.push(current);
-      for (const neighbor of unionNeighbors.get(current) ?? []) {
-        if (!componentOf.has(neighbor)) {
-          componentOf.set(neighbor, id);
-          queue.push(neighbor);
-        }
-      }
-    }
-    components.push(nodes);
-  }
-
-  // depth 0 = no dependents (top of its cluster). Longest path over
-  // reverse edges, memoized; cycles (shouldn't exist) break to 0.
-  // Edges never cross components, so global depth = per-cluster depth.
-  const depths = new Map<string, number>();
-  const visiting = new Set<string>();
-  const depthOf = (fileName: string): number => {
-    const memo = depths.get(fileName);
-    if (memo !== undefined) return memo;
-    if (visiting.has(fileName)) return 0;
-    visiting.add(fileName);
-    let depth = 0;
-    for (const dependent of dependentsOf.get(fileName) ?? []) {
-      depth = Math.max(depth, depthOf(dependent) + 1);
-    }
-    visiting.delete(fileName);
-    depths.set(fileName, depth);
-    return depth;
-  };
-  for (const fileName of visible) depthOf(fileName);
-  for (const ghost of allGhosts) depthOf(ghost);
-
-  // Lay out each component into a local (0,0)-anchored box.
-  //
-  // Inside a component, ownership grouping: each root (nothing depends
-  // on it: a collab, a map, a standalone tool) becomes a BLOCK with
-  // its EXCLUSIVE dependencies (reached from that root only) stacked
-  // directly beneath it, so those edges stay short and local. Only
-  // dependencies shared by two or more roots go to a common foundation
-  // laid out in depth bands under all the blocks, so the only edges that
-  // travel are the genuinely shared ones.
-  type Cluster = {
-    positions: Map<string, NodePos>;
-    width: number;
-    height: number;
-    size: number;
-  };
-
-  const dims = (id: string) => {
-    if (isGhostId(id)) {
-      return {
-        width: nodeWidth(ghostName(id), true),
-        height: nodeHeight(true),
-      };
-    }
-    const isDependency = dependencySet.has(id);
-    return {
-      width: nodeWidth(displayName(id), isDependency),
-      height: nodeHeight(isDependency),
-    };
-  };
-  // Flow `items` into wrapped rows anchored at (0, startY); returns the
-  // bounding box. Items are placed in the given order.
-  const flowRows = (
-    positions: Map<string, NodePos>,
-    items: string[],
-    startY: number,
-    wrapWidth: number,
-  ): { width: number; bottom: number } => {
-    let x = 0;
-    let y = startY;
-    let rowHeight = 0;
-    let width = 0;
-    for (const fileName of items) {
-      const d = dims(fileName);
-      if (x > 0 && x + d.width > wrapWidth) {
-        x = 0;
-        y += rowHeight + ROW_GAP_Y;
-        rowHeight = 0;
-      }
-      positions.set(fileName, { x, y, width: d.width, height: d.height });
-      width = Math.max(width, x + d.width);
-      rowHeight = Math.max(rowHeight, d.height);
-      x += d.width + SLOT_GAP_X;
-    }
-    return { width, bottom: items.length > 0 ? y + rowHeight : startY };
-  };
-
-  const clusters: Cluster[] = components.map((nodes) => {
-    const inComponent = new Set(nodes);
-    const roots = nodes
-      .filter((f) => (dependentsOf.get(f)?.size ?? 0) === 0)
-      .toSorted(byName);
-
-    // Which roots reach each node (walking down dependency edges).
-    const reachedBy = new Map<string, Set<string>>();
-    for (const root of roots) {
-      const stack = [root];
-      const seen = new Set([root]);
-      while (stack.length > 0) {
-        const current = stack.pop()!;
-        for (const dep of depsOf.get(current) ?? []) {
-          if (!inComponent.has(dep) || seen.has(dep)) continue;
-          seen.add(dep);
-          let set = reachedBy.get(dep);
-          if (!set) reachedBy.set(dep, (set = new Set()));
-          set.add(root);
-          stack.push(dep);
-        }
-      }
-    }
-
-    const exclusiveOf = new Map<string, string[]>();
-    const shared: string[] = [];
-    for (const fileName of nodes) {
-      if ((dependentsOf.get(fileName)?.size ?? 0) === 0) continue; // root
-      const owners = reachedBy.get(fileName);
-      if (owners !== undefined && owners.size === 1) {
-        const owner = [...owners][0]!;
-        let list = exclusiveOf.get(owner);
-        if (!list) exclusiveOf.set(owner, (list = []));
-        list.push(fileName);
-      } else {
-        shared.push(fileName);
-      }
-    }
-
-    // Order blocks by how much shared infrastructure each root uses:
-    // light users float to the top rows, heavy sharers sink to the row
-    // just above the shared foundation, keeping their many edges short.
-    const sharedDegree = new Map<string, number>();
-    for (const node of shared) {
-      for (const owner of reachedBy.get(node) ?? []) {
-        sharedDegree.set(owner, (sharedDegree.get(owner) ?? 0) + 1);
-      }
-    }
-    const orderedRoots = roots.toSorted(
-      (a, b) =>
-        (sharedDegree.get(a) ?? 0) - (sharedDegree.get(b) ?? 0) || byName(a, b),
-    );
-
-    // One block per root: the root on top, its exclusive deps banded by
-    // depth below, wrapped to a narrow column so the block stays tall
-    // and skinny rather than smearing across the cluster.
-    type Block = {
-      positions: Map<string, NodePos>;
-      width: number;
-      height: number;
-    };
-    const blocks: Block[] = orderedRoots.map((root) => {
-      const positions = new Map<string, NodePos>();
-      const rootDims = dims(root);
-      positions.set(root, { x: 0, y: 0, ...rootDims });
-      const exclusive = exclusiveOf.get(root) ?? [];
-      const wrapWidth = Math.max(
-        rootDims.width,
-        Math.min(720, Math.ceil(Math.sqrt(exclusive.length)) * 170),
-      );
-      const bands: string[][] = [];
-      for (const fileName of exclusive) {
-        (bands[depths.get(fileName) ?? 0] ??= []).push(fileName);
-      }
-      let y = rootDims.height + 36;
-      let width = rootDims.width;
-      for (const band of bands) {
-        if (!band) continue;
-        const box = flowRows(positions, band.toSorted(byName), y, wrapWidth);
-        width = Math.max(width, box.width);
-        y = box.bottom + 32;
-      }
-      return { positions, width, height: y - 32 };
-    });
-
-    // Blocks flow into rows; the shared foundation goes below them.
-    const positions = new Map<string, NodePos>();
-    const blockWrap = Math.max(BAND_MAX_WIDTH, ...blocks.map((b) => b.width));
-    let bx = 0;
-    let by = 0;
-    let blockRowHeight = 0;
-    let clusterWidth = 0;
-    for (const block of blocks) {
-      if (bx > 0 && bx + block.width > blockWrap) {
-        bx = 0;
-        by += blockRowHeight + 72;
-        blockRowHeight = 0;
-      }
-      for (const [fileName, pos] of block.positions) {
-        positions.set(fileName, { ...pos, x: pos.x + bx, y: pos.y + by });
-      }
-      clusterWidth = Math.max(clusterWidth, bx + block.width);
-      bx += block.width + 56;
-      blockRowHeight = Math.max(blockRowHeight, block.height);
-    }
-    let y = by + blockRowHeight + (shared.length > 0 ? 130 : 0);
-
-    // Shared foundation: depth bands, barycenter-ordered against the
-    // already-placed dependents so shared helpers drift toward their
-    // heaviest users.
-    const sharedBands: string[][] = [];
-    for (const fileName of shared) {
-      (sharedBands[depths.get(fileName) ?? 0] ??= []).push(fileName);
-    }
-    for (const band of sharedBands) {
-      if (!band) continue;
-      const keyed = band.map((fileName) => {
-        const anchors = [...(dependentsOf.get(fileName) ?? [])]
-          .map((d) => positions.get(d))
-          .filter((p) => p !== undefined);
-        const barycenter =
-          anchors.length > 0
-            ? anchors.reduce((sum, p) => sum + p.x + p.width / 2, 0) /
-              anchors.length
-            : Infinity;
-        return { fileName, barycenter };
-      });
-      keyed.sort(
-        (a, b) => a.barycenter - b.barycenter || byName(a.fileName, b.fileName),
-      );
-      const box = flowRows(
-        positions,
-        keyed.map((k) => k.fileName),
-        y,
-        Math.max(clusterWidth, BAND_MAX_WIDTH),
-      );
-      clusterWidth = Math.max(clusterWidth, box.width);
-      y = box.bottom + BAND_GAP;
-    }
-
-    let height = 0;
-    for (const pos of positions.values()) {
-      height = Math.max(height, pos.y + pos.height);
-    }
-    return { positions, width: clusterWidth, height, size: nodes.length };
-  });
-
-  // Pack clusters into rows, largest first. Singletons sort last and
-  // flow tightly, forming a compact strip of unconnected mods.
-  clusters.sort((a, b) => b.size - a.size || b.width - a.width);
-  const out = new Map<string, NodePos>();
-  let cursorX = 24;
-  let cursorY = 24;
-  let packedRowHeight = 0;
-  for (const cluster of clusters) {
-    if (cursorX > 24 && cursorX + cluster.width > PACK_MAX_WIDTH) {
-      cursorX = 24;
-      cursorY += packedRowHeight + CLUSTER_GAP_Y;
-      packedRowHeight = 0;
-    }
-    for (const [fileName, pos] of cluster.positions) {
-      out.set(fileName, { ...pos, x: pos.x + cursorX, y: pos.y + cursorY });
-    }
-    cursorX +=
-      cluster.width + (cluster.size === 1 ? SINGLETON_GAP_X : CLUSTER_GAP_X);
-    packedRowHeight = Math.max(packedRowHeight, cluster.height);
-  }
-  return out;
-}
+const nodeTypes = {
+  mod: ModNode,
+  ghost: GhostNode,
+  region: RegionNode,
+};
+type AnyFlowNode = ModFlowNode | GhostFlowNode | RegionFlowNode;
 
 export function GraphView(props: {
   index: ModIndex;
@@ -400,60 +79,101 @@ function GraphViewInner({
   selectedId: string | null;
   onSelect: (fileName: string | null) => void;
 }) {
-  const visible = new Set(
+  // The enabled filter narrows what exists as far as the graph is
+  // concerned. The orphans filter is a way of FINDING orphans, so it
+  // only trims the overview: focusing one still shows its real context
+  // (usually a pile of disabled dependents, which is the explanation).
+  const inScope = new Set(
     (filter === "enabled"
       ? index.files.filter((f) => f.enabled)
       : index.files
     ).map((f) => f.fileName),
   );
+  const overviewSet =
+    filter === "orphans"
+      ? new Set([...inScope].filter((f) => orphans.has(f)))
+      : inScope;
 
-  // Missing dependencies of visible mods become ghost nodes, keyed by
-  // the missing Name (several mods missing the same dep share one).
+  // Missing dependencies become ghost nodes, keyed by the missing Name
+  // (several mods missing the same dep share one).
   const ghostDeps = new Map<string, string[]>();
   const ghostDependents = new Map<string, string[]>();
-  for (const file of index.files) {
-    if (!visible.has(file.fileName)) continue;
-    for (const name of new Set(index.missing.get(file.fileName) ?? [])) {
+  for (const fileName of inScope) {
+    for (const name of new Set(index.missing.get(fileName) ?? [])) {
       const id = GHOST_PREFIX + name;
-      let deps = ghostDeps.get(file.fileName);
-      if (!deps) ghostDeps.set(file.fileName, (deps = []));
+      let deps = ghostDeps.get(fileName);
+      if (!deps) ghostDeps.set(fileName, (deps = []));
       deps.push(id);
       let dependents = ghostDependents.get(id);
       if (!dependents) ghostDependents.set(id, (dependents = []));
-      dependents.push(file.fileName);
+      dependents.push(fileName);
     }
   }
 
-  const positions = layoutPositions(index, visible, dependencySet, ghostDeps);
+  // A selection the current scope dropped (a disabled mod picked in the
+  // sidebar while the enabled filter is on) still gets focused; it is
+  // what the user asked to look at.
+  const focused =
+    selectedId !== null && (inScope.has(selectedId) || isGhostId(selectedId))
+      ? selectedId
+      : null;
 
-  // The selected node's neighborhood: everything it transitively needs
-  // plus everything that transitively needs it.
-  // Hard closure both ways, plus one hop of optional neighbors: their
-  // edges are drawn as active around the selection, so the nodes they
-  // point at must not be dimmed out from under them.
-  const neighborhood =
-    selectedId && isGhostId(selectedId)
-      ? ghostDependents.has(selectedId)
-        ? new Set([selectedId, ...ghostDependents.get(selectedId)!])
-        : null // ghost vanished (e.g. just installed), so no dimming
-      : selectedId && visible.has(selectedId)
-        ? new Set([
-            ...depClosure(index, [selectedId]),
-            ...dependentClosure(index, [selectedId]),
-            ...(index.optionalDeps.get(selectedId) ?? []),
-            ...(index.optionalDependents.get(selectedId) ?? []),
-            ...(ghostDeps.get(selectedId) ?? []),
-          ])
-        : null;
+  // One scalar per selector: returning an object here would build a new
+  // reference every render, which the store reads as a change and spins.
+  const paneWidth = useStore((state) => state.width);
+  const paneHeight = useStore((state) => state.height);
+  // Aim the layout at the shape of the area the fit will actually use
+  // (the detail panel covers the right of it in focus mode), so it
+  // neither leaves a dead band down one side nor overshoots.
+  const usableWidth = Math.max(
+    320,
+    paneWidth - EDGE_PAD - (focused ? PANEL_INSET : EDGE_PAD),
+  );
+  const usableHeight = Math.max(240, paneHeight - EDGE_PAD - MINIMAP_CLEARANCE);
+  const aspect = paneHeight > 0 ? usableWidth / usableHeight : 1.6;
+
+  const layout = focused
+    ? layoutFocus(
+        index,
+        focused,
+        new Set([...inScope, focused]),
+        dependencySet,
+        ghostDeps,
+        aspect,
+      )
+    : layoutOverview(
+        index,
+        overviewSet,
+        dependencySet,
+        ghostDeps,
+        aspect,
+        filter === "orphans" ? "orphans" : "mods",
+      );
+  const { positions, bounds, nodes: drawn, regions, drawEdge, usedBy } = layout;
 
   const nodes: AnyFlowNode[] = (() => {
     const out: AnyFlowNode[] = [];
+    // Regions first and at the bottom of the stack: they are backdrop.
+    for (const region of regions) {
+      out.push({
+        id: region.id,
+        type: "region",
+        position: { x: region.x, y: region.y },
+        width: region.width,
+        height: region.height,
+        draggable: false,
+        selectable: false,
+        zIndex: 0,
+        data: {
+          title: region.title,
+          note: region.note,
+          variant: region.variant,
+        },
+      });
+    }
     for (const file of index.files) {
-      if (!visible.has(file.fileName)) continue;
-      const pos = positions.get(file.fileName)!;
-      const dimmed =
-        (neighborhood && !neighborhood.has(file.fileName)) ||
-        (filter === "orphans" && !orphans.has(file.fileName));
+      const pos = positions.get(file.fileName);
+      if (!pos || !drawn.has(file.fileName)) continue;
       out.push({
         id: file.fileName,
         type: "mod",
@@ -461,20 +181,19 @@ function GraphViewInner({
         width: pos.width,
         height: pos.height,
         selected: file.fileName === selectedId,
-        style: { opacity: dimmed ? 0.25 : 1 },
+        zIndex: 1,
         data: {
           file,
           orphan: orphans.has(file.fileName),
           missing: index.missing.get(file.fileName)?.length ?? 0,
           hasDependents: dependencySet.has(file.fileName),
+          usedBy: usedBy.get(file.fileName),
         },
       });
     }
     for (const [id, dependents] of ghostDependents) {
       const pos = positions.get(id);
-      if (!pos) continue;
-      const dimmed =
-        (neighborhood && !neighborhood.has(id)) || filter === "orphans";
+      if (!pos || !drawn.has(id)) continue;
       out.push({
         id,
         type: "ghost",
@@ -482,7 +201,7 @@ function GraphViewInner({
         width: pos.width,
         height: pos.height,
         selected: id === selectedId,
-        style: { opacity: dimmed ? 0.25 : 1 },
+        zIndex: 1,
         data: { name: ghostName(id), neededBy: dependents.length },
       });
     }
@@ -491,111 +210,106 @@ function GraphViewInner({
 
   const edges: Edge[] = (() => {
     const out: Edge[] = [];
-    const push = (from: string, to: string, optional: boolean) => {
-      if (!visible.has(from) || !visible.has(to)) return;
-      const active =
-        selectedId !== null && (from === selectedId || to === selectedId);
-      const dimmed =
-        (neighborhood && !(neighborhood.has(from) && neighborhood.has(to))) ||
-        (filter === "orphans" && !(orphans.has(from) || orphans.has(to)));
+    const push = (from: string, to: string, kind: string) => {
+      if (!drawn.has(from) || !drawn.has(to)) return;
+      if (!drawEdge(from, to)) return;
+      const active = focused !== null && (from === focused || to === focused);
       out.push({
-        id: `${optional ? "o" : "h"}:${from}->${to}`,
+        id: `${kind}:${from}->${to}`,
         source: from,
         target: to,
-        className: [optional && "edge-optional", active && "edge-active"]
+        className: [kind !== "h" && `edge-${kind}`, active && "edge-active"]
           .filter(Boolean)
           .join(" "),
-        style: dimmed ? { opacity: 0.12 } : undefined,
         markerEnd: active
           ? { type: MarkerType.ArrowClosed, width: 14, height: 14 }
           : undefined,
       });
     };
     for (const [from, deps] of index.hardDeps) {
-      for (const to of deps) push(from, to, false);
+      for (const to of deps) push(from, to, "h");
     }
-    // Optional-dep edges only appear around the selected node; drawn
-    // for everything they add more crosshatch than information.
-    if (selectedId) {
+    // Optional edges only ever hang off the selection; drawn everywhere
+    // they add crosshatch, not information.
+    if (focused) {
       for (const [from, deps] of index.optionalDeps) {
         for (const to of deps) {
-          if (from === selectedId || to === selectedId) push(from, to, true);
+          if (from === focused || to === focused) push(from, to, "optional");
         }
       }
     }
-    // Edges into ghost nodes: dashed destructive, always drawn, since a
-    // missing dep is a problem worth the ink.
+    // A missing dependency is a problem worth the ink wherever it shows.
     for (const [ghost, dependents] of ghostDependents) {
-      for (const from of dependents) {
-        const active =
-          selectedId !== null && (from === selectedId || ghost === selectedId);
-        const dimmed =
-          (neighborhood &&
-            !(neighborhood.has(from) && neighborhood.has(ghost))) ||
-          filter === "orphans";
-        out.push({
-          id: `m:${from}->${ghost}`,
-          source: from,
-          target: ghost,
-          className: ["edge-missing", active && "edge-active"]
-            .filter(Boolean)
-            .join(" "),
-          style: dimmed ? { opacity: 0.12 } : undefined,
-          markerEnd: active
-            ? { type: MarkerType.ArrowClosed, width: 14, height: 14 }
-            : undefined,
-        });
-      }
+      for (const from of dependents) push(from, ghost, "missing");
     }
     return out;
   })();
 
-  // Center on the newly selected node (selection can come from the
-  // sidebar, far outside the viewport). The last-centered id is
-  // tracked so layout churn from toggle rescans doesn't re-trigger
-  // the flight for an unchanged selection.
-  const { setCenter, getZoom, fitView } = useReactFlow();
-
-  // Refit when the visible set changes shape (filter switch, folder
-  // change); the initial fitView only covers mount.
-  const nodesInitialized = useNodesInitialized();
+  // Refit whenever the picture changes shape: switching filters, and
+  // above all entering or leaving focus, which relays everything out.
+  //
+  // The viewport is computed here rather than handed to fitView, which
+  // measures the node bounds in React Flow's store: that store is filled
+  // by a child effect one commit AFTER this render, so fitView would
+  // frame the PREVIOUS graph. The layout already knows its own extent,
+  // so use it and skip the round trip.
+  const { setViewport } = useReactFlow();
   const lastFitKey = useRef("");
   useEffect(() => {
-    if (!nodesInitialized) return;
-    const key = `${filter}:${positions.size}`;
+    // Before the pane has been measured there is nothing to fit into.
+    if (paneWidth === 0 || paneHeight === 0) return;
+    if (bounds.width <= 0 || bounds.height <= 0) return;
+    // The pane size belongs in the key too, so resizing the window (or
+    // dragging the sidebar) reframes instead of leaving the graph
+    // stranded off to one side.
+    const key = `${filter}:${focused ?? ""}:${stamp(nodes)}:${Math.round(usableWidth)}x${Math.round(usableHeight)}`;
     if (lastFitKey.current === key) return;
+    const first = lastFitKey.current === "";
     lastFitKey.current = key;
-    requestAnimationFrame(() => {
-      void fitView({ padding: 0.1, maxZoom: 1, duration: 300 });
-    });
-  }, [nodesInitialized, filter, positions.size, fitView]);
-  const lastCentered = useRef<string | null>(null);
-  useEffect(() => {
-    if (!selectedId) {
-      lastCentered.current = null;
-      return;
-    }
-    if (lastCentered.current === selectedId) return;
-    const pos = positions.get(selectedId);
-    if (!pos) return;
-    lastCentered.current = selectedId;
-    setCenter(pos.x + pos.width / 2, pos.y + pos.height / 2, {
-      zoom: Math.max(getZoom(), 0.85),
-      duration: 300,
-    });
-  }, [selectedId, positions, setCenter, getZoom]);
+
+    const zoom = Math.max(
+      MIN_ZOOM,
+      Math.min(
+        usableWidth / bounds.width,
+        usableHeight / bounds.height,
+        focused ? MAX_ZOOM : OVERVIEW_MAX_ZOOM,
+      ),
+    );
+    void setViewport(
+      {
+        zoom,
+        x: EDGE_PAD + (usableWidth - bounds.width * zoom) / 2 - bounds.x * zoom,
+        y:
+          EDGE_PAD +
+          (usableHeight - bounds.height * zoom) / 2 -
+          bounds.y * zoom,
+      },
+      // The first frame has nothing to animate away from.
+      { duration: first ? 0 : 320 },
+    );
+  }, [
+    filter,
+    focused,
+    nodes,
+    bounds,
+    paneWidth,
+    paneHeight,
+    usableWidth,
+    usableHeight,
+    setViewport,
+  ]);
 
   return (
     <ReactFlow
       nodes={nodes}
       edges={edges}
       nodeTypes={nodeTypes}
-      onNodeClick={(_event, node) => onSelect(node.id)}
+      onNodeClick={(_event, node) =>
+        node.type === "region" ? onSelect(null) : onSelect(node.id)
+      }
       onPaneClick={() => onSelect(null)}
-      fitView
-      fitViewOptions={{ padding: 0.1, maxZoom: 1 }}
-      minZoom={0.05}
-      maxZoom={1.5}
+      minZoom={MIN_ZOOM}
+      maxZoom={MAX_ZOOM}
       panOnScroll
       zoomOnPinch
       proOptions={{ hideAttribution: true }}

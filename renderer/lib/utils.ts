@@ -12,6 +12,10 @@ export function dragRegion(value: "drag" | "no-drag"): CSSProperties {
   return { ["WebkitAppRegion" as never]: value };
 }
 
+export function displayName(fileName: string): string {
+  return fileName.replace(/\.zip$/i, "");
+}
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KB", "MB", "GB"];

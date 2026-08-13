@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { ConfirmDialog, type PendingAction } from "@/components/ConfirmDialog";
 import { DetailPanel, GhostPanel } from "@/components/DetailPanel";
-import { ghostName, GraphView, isGhostId } from "@/components/graph/GraphView";
+import { GraphView } from "@/components/graph/GraphView";
+import { ghostName, isGhostId } from "@/components/graph/layout";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { Sidebar } from "@/components/sidebar/Sidebar";
 import { StatusPill, type Status } from "@/components/StatusPill";
@@ -24,7 +25,7 @@ import {
   useSetEnabled,
 } from "@/hooks/useMods";
 import { queryKeys } from "@/lib/queryKeys";
-import { cn, dragRegion } from "@/lib/utils";
+import { cn, displayName, dragRegion } from "@/lib/utils";
 
 export type GraphFilter = "all" | "enabled" | "orphans";
 
@@ -440,10 +441,6 @@ export function App() {
       <StatusPill status={status} />
     </div>
   );
-}
-
-export function displayName(fileName: string): string {
-  return fileName.replace(/\.zip$/i, "");
 }
 
 function ScanProgress() {
