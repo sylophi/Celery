@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   DownloadIcon,
   FolderIcon,
+  PackageOpenIcon,
   StarIcon,
   TriangleAlertIcon,
   XIcon,
@@ -27,6 +28,20 @@ import {
 import { ModIconGlyph, TagIconGlyph, tagsBeyondCategory } from "@/lib/modIcons";
 import { cn, displayName, formatBytes } from "@/lib/utils";
 
+// The panel sits over the graph (a canvas you pan anyway, and one the
+// fit already keeps clear) but beside the grid and list, where covering
+// the thing you are reading is exactly wrong.
+export type PanelPlacement = "floating" | "docked";
+
+function panelClass(placement: PanelPlacement): string {
+  return cn(
+    "flex flex-col overflow-hidden bg-popover text-popover-foreground",
+    placement === "floating"
+      ? "absolute inset-y-3 right-3 z-40 w-72 rounded-xl border border-border shadow-floating"
+      : "h-full w-full border-l border-border",
+  );
+}
+
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}k`;
@@ -39,6 +54,7 @@ export function DetailPanel({
   orphan,
   dependencySet,
   folder,
+  placement,
   onSelect,
   onClose,
   onToggle,
@@ -48,6 +64,7 @@ export function DetailPanel({
   orphan: boolean;
   dependencySet: Set<string>;
   folder: string;
+  placement: PanelPlacement;
   onSelect: (fileName: string) => void;
   onClose: () => void;
   onToggle: (enable: boolean) => void;
@@ -99,7 +116,7 @@ export function DetailPanel({
   };
 
   return (
-    <div className="absolute inset-y-3 right-3 z-40 flex w-72 flex-col overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-floating">
+    <div className={panelClass(placement)}>
       <div className="shrink-0 border-b border-border p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -318,11 +335,13 @@ export function DetailPanel({
 export function GhostPanel({
   name,
   index,
+  placement,
   onSelect,
   onClose,
 }: {
   name: string;
   index: ModIndex;
+  placement: PanelPlacement;
   onSelect: (fileName: string) => void;
   onClose: () => void;
 }) {
@@ -332,7 +351,7 @@ export function GhostPanel({
     .map((f) => f.fileName)
     .toSorted();
   return (
-    <div className="absolute inset-y-3 right-3 z-40 flex w-72 flex-col overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-floating">
+    <div className={panelClass(placement)}>
       <div className="shrink-0 border-b border-border p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -680,5 +699,21 @@ function DepRow({
         {file?.entries[0]?.version ?? ""}
       </span>
     </li>
+  );
+}
+
+// What the docked panel shows with nothing selected. It holds the column
+// open so choosing a mod never reflows the grid behind it.
+export function EmptyPanel() {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 border-l border-border bg-popover px-6 text-center">
+      <PackageOpenIcon
+        aria-hidden
+        className="size-5 text-muted-foreground/40"
+      />
+      <p className="text-xs text-muted-foreground/60">
+        pick a mod to see what it is and what it needs
+      </p>
+    </div>
   );
 }

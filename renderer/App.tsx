@@ -9,7 +9,12 @@ import {
 } from "@shared/graph";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog, type PendingAction } from "@/components/ConfirmDialog";
-import { DetailPanel, GhostPanel } from "@/components/DetailPanel";
+import {
+  DetailPanel,
+  EmptyPanel,
+  GhostPanel,
+  type PanelPlacement,
+} from "@/components/DetailPanel";
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
 import { OrphanDialog } from "@/components/OrphanCleanup";
@@ -270,6 +275,38 @@ export function App() {
   const selectedGhost =
     selectedId && isGhostId(selectedId) ? ghostName(selectedId) : null;
 
+  // Same panel either way; only where it sits changes.
+  const panel = (placement: PanelPlacement) => {
+    if (!index) return null;
+    if (selectedGhost !== null) {
+      return (
+        <GhostPanel
+          name={selectedGhost}
+          index={index}
+          placement={placement}
+          onSelect={setSelectedId}
+          onClose={() => setSelectedId(null)}
+        />
+      );
+    }
+    if (selectedFile !== null) {
+      return (
+        <DetailPanel
+          file={selectedFile}
+          index={index}
+          orphan={orphans.has(selectedFile.fileName)}
+          dependencySet={dependencySet}
+          folder={folder ?? ""}
+          placement={placement}
+          onSelect={setSelectedId}
+          onClose={() => setSelectedId(null)}
+          onToggle={(enable) => requestToggle(selectedFile.fileName, enable)}
+        />
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       {folder ? (
@@ -291,8 +328,8 @@ export function App() {
             }}
             onSettings={() => setSettingsOpen(true)}
           />
-          <main className="relative min-h-0 flex-1">
-            <div className="relative size-full">
+          <main className="relative flex min-h-0 flex-1">
+            <div className="relative min-w-0 flex-1">
               {modsQuery.isLoading ? (
                 <ScanProgress />
               ) : modsQuery.isError ? (
@@ -333,29 +370,16 @@ export function App() {
                   <ListView {...browseProps} index={index} />
                 ))
               )}
-              {selectedGhost && index && (
-                <GhostPanel
-                  name={selectedGhost}
-                  index={index}
-                  onSelect={setSelectedId}
-                  onClose={() => setSelectedId(null)}
-                />
-              )}
-              {selectedFile && index && (
-                <DetailPanel
-                  file={selectedFile}
-                  index={index}
-                  orphan={orphans.has(selectedFile.fileName)}
-                  dependencySet={dependencySet}
-                  folder={folder}
-                  onSelect={setSelectedId}
-                  onClose={() => setSelectedId(null)}
-                  onToggle={(enable) =>
-                    requestToggle(selectedFile.fileName, enable)
-                  }
-                />
-              )}
+              {view === "graph" && panel("floating")}
             </div>
+            {/* Docked beside the browse views rather than over them, and
+                held open even with nothing selected so picking a mod
+                never reflows the grid behind it. */}
+            {view !== "graph" && (
+              <aside className="w-72 shrink-0">
+                {panel("docked") ?? <EmptyPanel />}
+              </aside>
+            )}
           </main>
           <StatusBar
             folder={folder}
