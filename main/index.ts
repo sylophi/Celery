@@ -22,8 +22,9 @@ let mainWindow: BrowserWindow | null = null;
 // Windows chrome colors must track the renderer theme by hand; sRGB
 // duplicates of the v1 tokens (bg-white / neutral-900). The window
 // background matches `--background` so resize flashes blend in; the
-// 28px overlay matches the standard caption-button strip (shigomori's
-// win32 chrome recipe).
+// The overlay is as tall as the app's own toolbar, so Windows centres
+// its caption buttons in that row instead of floating them above it.
+// Keep in step with the toolbar's height.
 function chromeColors() {
   const dark = nativeTheme.shouldUseDarkColors;
   return {
@@ -31,7 +32,7 @@ function chromeColors() {
     overlay: {
       color: dark ? "#171717" : "#ffffff",
       symbolColor: dark ? "#fafafa" : "#171717",
-      height: 28,
+      height: 44,
     },
   };
 }

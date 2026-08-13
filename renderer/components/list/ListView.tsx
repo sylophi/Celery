@@ -1,6 +1,6 @@
 import type { ModIndex } from "@shared/graph";
 import type { ModFile } from "@shared/schemas";
-import { StarIcon } from "lucide-react";
+import { ArrowUpDownIcon, StarIcon } from "lucide-react";
 import { useSetFavorite } from "@/hooks/useMods";
 import { ModIconGlyph } from "@/lib/modIcons";
 import { cn, displayName } from "@/lib/utils";
@@ -55,6 +55,7 @@ function makeComparator(
 export function ListView({
   files,
   sort,
+  onSort,
   orphans,
   updates,
   index,
@@ -65,6 +66,7 @@ export function ListView({
 }: {
   files: ModFile[];
   sort: SortMode;
+  onSort: (sort: SortMode) => void;
   orphans: Set<string>;
   updates: Set<string>;
   index: ModIndex;
@@ -80,14 +82,6 @@ export function ListView({
   const depended = files
     .filter((file) => dependencySet.has(file.fileName))
     .toSorted(comparator);
-
-  if (files.length === 0) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-xs text-muted-foreground/60">no mod matches</p>
-      </div>
-    );
-  }
 
   const section = (label: string, list: ModFile[]) =>
     list.length === 0 ? null : (
@@ -120,11 +114,40 @@ export function ListView({
   // Escape clears the selection; the grid itself has no dead space
   // worth wiring up as a second way to do it.
   return (
-    <div className="h-full overflow-y-auto px-5 py-4">
-      <div className="flex flex-col gap-6 pb-8">
-        {section("mods", topLevel)}
-        {section("dependencies", depended)}
+    <div className="h-full overflow-y-auto px-5 py-3">
+      {/* Sorting lives here rather than in the toolbar: it applies to
+          this view alone, and a control that comes and goes with the
+          view makes the toolbar feel unstable. */}
+      <div className="mb-1 flex items-center justify-end">
+        <label className="flex items-center gap-1.5">
+          <ArrowUpDownIcon
+            aria-hidden
+            className="size-3 shrink-0 text-muted-foreground/60"
+          />
+          <select
+            value={sort}
+            onChange={(event) => onSort(event.target.value as SortMode)}
+            aria-label="sort mods by"
+            className="h-6 cursor-pointer appearance-none rounded-md bg-transparent pr-1 text-[11px] text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground"
+          >
+            {SORT_MODES.map((mode) => (
+              <option key={mode.value} value={mode.value}>
+                {mode.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+      {files.length === 0 ? (
+        <p className="py-16 text-center text-xs text-muted-foreground/60">
+          no mod matches
+        </p>
+      ) : (
+        <div className="flex flex-col gap-6 pb-8">
+          {section("mods", topLevel)}
+          {section("dependencies", depended)}
+        </div>
+      )}
     </div>
   );
 }

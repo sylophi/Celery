@@ -242,8 +242,6 @@ export function App() {
             search={search}
             onSearch={setSearch}
             searchRef={searchRef}
-            sort={sort}
-            onSort={changeSort}
             rescanning={modsQuery.isFetching}
             onRescan={() => {
               // Files may have changed under us, and update-badge state
@@ -295,6 +293,7 @@ export function App() {
                 <ListView
                   files={visible}
                   sort={sort}
+                  onSort={changeSort}
                   orphans={orphans}
                   updates={updates}
                   index={index}

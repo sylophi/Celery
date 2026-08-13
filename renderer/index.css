@@ -178,6 +178,18 @@
   }
 }
 
+/* Windows paints its caption buttons over the top-right of the client
+   area. The Window Controls Overlay reports the draggable strip it left
+   us, so the room to reserve is whatever it did NOT leave — correct at
+   any display scaling, unlike a hardcoded inset. The fallback resolves
+   the same calc back to a plain 140px.
+
+   Unlayered on purpose: it has to beat the `px-3` utility on the same
+   element, and Tailwind's utilities are in a layer. */
+[data-platform="win32"] [data-titlebar] {
+  padding-right: calc(100% - env(titlebar-area-width, calc(100% - 140px)));
+}
+
 /* Status pill: visible, hold, then fade. Fully CSS-driven so the
    component needs no timers or effect state. */
 @keyframes status-pill-fade {

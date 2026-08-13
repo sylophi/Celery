@@ -1,22 +1,25 @@
 import type { RefObject } from "react";
-import { ArrowUpDownIcon, RefreshCwIcon, Settings2Icon } from "lucide-react";
+import {
+  LayoutGridIcon,
+  NetworkIcon,
+  RefreshCwIcon,
+  Settings2Icon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { SORT_MODES, type SortMode } from "@/components/list/ListView";
 import { cn, dragRegion } from "@/lib/utils";
 
 // The app's one chrome bar: which view you are in, what it is showing,
 // and the two global actions. It also stands in for the title bar, so
-// it carries the drag region and the room the native window buttons
-// need on either platform.
+// it carries the drag region and keeps clear of the native window
+// buttons — macOS traffic lights on the left by a fixed inset, Windows
+// caption buttons on the right via `[data-titlebar]` in the stylesheet,
+// which reads their real width out of the Window Controls Overlay.
 
 export type View = "graph" | "list";
 export type Filter = "all" | "enabled" | "orphans";
 
 const isMac = window.api.platform === "darwin";
-// Windows overlays native caption buttons over the top-right of the
-// client area; keep the toolbar's own controls clear of them.
-const isWindows = window.api.platform === "win32";
 
 export function Toolbar({
   view,
@@ -27,8 +30,6 @@ export function Toolbar({
   search,
   onSearch,
   searchRef,
-  sort,
-  onSort,
   rescanning,
   onRescan,
   onSettings,
@@ -41,29 +42,41 @@ export function Toolbar({
   search: string;
   onSearch: (search: string) => void;
   searchRef: RefObject<HTMLInputElement | null>;
-  sort: SortMode;
-  onSort: (sort: SortMode) => void;
   rescanning: boolean;
   onRescan: () => void;
   onSettings: () => void;
 }) {
   return (
     <header
+      data-titlebar
       className={cn(
-        "z-40 flex h-13 shrink-0 items-center gap-3 border-b border-border px-4",
+        "z-40 flex h-11 shrink-0 items-center gap-2.5 border-b border-border px-3",
         isMac && "pl-[92px]",
-        isWindows && "pr-[150px]",
       )}
       style={dragRegion("drag")}
     >
-      <span className="shrink-0 text-[13px] font-semibold tracking-tight">
+      <span className="shrink-0 pr-0.5 text-[13px] font-semibold tracking-tight">
         Celery
       </span>
-      <div className="flex items-center gap-2" style={dragRegion("no-drag")}>
+      <div
+        className="flex shrink-0 items-center gap-2"
+        style={dragRegion("no-drag")}
+      >
         <SegmentedControl<View>
+          size="md"
           options={[
-            { value: "graph", label: "graph", selected: view === "graph" },
-            { value: "list", label: "list", selected: view === "list" },
+            {
+              value: "graph",
+              label: "graph",
+              selected: view === "graph",
+              icon: <NetworkIcon aria-hidden className="size-3.5" />,
+            },
+            {
+              value: "list",
+              label: "list",
+              selected: view === "list",
+              icon: <LayoutGridIcon aria-hidden className="size-3.5" />,
+            },
           ]}
           onSelect={onView}
         />
@@ -84,28 +97,13 @@ export function Toolbar({
           onSelect={onFilter}
         />
       </div>
-      <div className="flex-1" />
-      <div className="flex items-center gap-2" style={dragRegion("no-drag")}>
-        {view === "list" && (
-          <label className="flex items-center gap-1.5">
-            <ArrowUpDownIcon
-              aria-hidden
-              className="size-3 shrink-0 text-muted-foreground/60"
-            />
-            <select
-              value={sort}
-              onChange={(event) => onSort(event.target.value as SortMode)}
-              aria-label="sort mods by"
-              className="h-7 cursor-pointer appearance-none rounded-md bg-transparent pr-1 text-[11px] text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground"
-            >
-              {SORT_MODES.map((mode) => (
-                <option key={mode.value} value={mode.value}>
-                  {mode.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+      {/* Everything right of here shrinks before anything wraps: the
+          window's 800px minimum has to hold the whole bar, caption
+          buttons included. */}
+      <div
+        className="flex min-w-0 flex-1 items-center justify-end gap-2"
+        style={dragRegion("no-drag")}
+      >
         <input
           ref={searchRef}
           value={search}
@@ -118,7 +116,7 @@ export function Toolbar({
           }}
           placeholder="search mods"
           spellCheck={false}
-          className="h-7 w-44 rounded-md border border-input bg-transparent px-2 text-xs text-foreground transition-colors outline-none placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+          className="h-7 w-full max-w-48 min-w-24 rounded-md border border-input bg-transparent px-2 text-xs text-foreground transition-colors outline-none placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
         />
         <Button
           variant="ghost"
