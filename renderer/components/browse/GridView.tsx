@@ -7,8 +7,9 @@ import { useOnScreen } from "@/hooks/useOnScreen";
 import { useRemoteModInfo } from "@/hooks/useRemote";
 import { ModIconGlyph } from "@/lib/modIcons";
 import { cn, displayName } from "@/lib/utils";
+import { BrowseHeader } from "./BrowseHeader";
 import { BrowseSection } from "./Section";
-import { makeComparator, SortSelect, type SortMode } from "./sort";
+import { makeComparator, type SortMode } from "./sort";
 
 // The gallery: mods as their own artwork, which is how anyone actually
 // recognises a map pack. The GameBanana screenshot carries the tile and
@@ -17,6 +18,8 @@ import { makeComparator, SortSelect, type SortMode } from "./sort";
 
 export function GridView({
   files,
+  total,
+  query,
   sort,
   onSort,
   orphans,
@@ -28,6 +31,8 @@ export function GridView({
   onSelect,
 }: {
   files: ModFile[];
+  total: number;
+  query: string;
   sort: SortMode;
   onSort: (sort: SortMode) => void;
   orphans: Set<string>;
@@ -59,30 +64,39 @@ export function GridView({
   );
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-3">
-      <div className="mb-1 flex items-center justify-end">
-        <SortSelect sort={sort} onSort={onSort} />
+    <div className="flex h-full flex-col">
+      <BrowseHeader
+        shown={files.length}
+        total={total}
+        query={query}
+        sort={sort}
+        onSort={onSort}
+      />
+      {/* No top padding on the scroll box itself: `sticky top-0`
+          resolves against its padding edge, so any would leave a
+          band above the section headers for rows to show through. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8">
+        {files.length === 0 ? (
+          <p className="py-16 text-center text-xs text-muted-foreground/60">
+            no mod matches
+          </p>
+        ) : (
+          <div className="flex flex-col gap-7 pt-3">
+            {section(
+              "mods",
+              files
+                .filter((f) => !dependencySet.has(f.fileName))
+                .toSorted(comparator),
+            )}
+            {section(
+              "dependencies",
+              files
+                .filter((f) => dependencySet.has(f.fileName))
+                .toSorted(comparator),
+            )}
+          </div>
+        )}
       </div>
-      {files.length === 0 ? (
-        <p className="py-16 text-center text-xs text-muted-foreground/60">
-          no mod matches
-        </p>
-      ) : (
-        <div className="flex flex-col gap-7 pb-8">
-          {section(
-            "mods",
-            files
-              .filter((f) => !dependencySet.has(f.fileName))
-              .toSorted(comparator),
-          )}
-          {section(
-            "dependencies",
-            files
-              .filter((f) => dependencySet.has(f.fileName))
-              .toSorted(comparator),
-          )}
-        </div>
-      )}
     </div>
   );
 }

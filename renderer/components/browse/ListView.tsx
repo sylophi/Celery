@@ -4,8 +4,9 @@ import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { useSetFavorite } from "@/hooks/useMods";
 import { ModIconGlyph } from "@/lib/modIcons";
 import { cn, displayName, formatBytes } from "@/lib/utils";
+import { BrowseHeader } from "./BrowseHeader";
 import { BrowseSection } from "./Section";
-import { makeComparator, SortSelect, type SortMode } from "./sort";
+import { makeComparator, type SortMode } from "./sort";
 
 // The dense one. Where the grid trades detail for recognisability, the
 // list spends the same room on the columns you would otherwise have to
@@ -13,6 +14,8 @@ import { makeComparator, SortSelect, type SortMode } from "./sort";
 
 export function ListView({
   files,
+  total,
+  query,
   sort,
   onSort,
   orphans,
@@ -24,6 +27,8 @@ export function ListView({
   onSelect,
 }: {
   files: ModFile[];
+  total: number;
+  query: string;
   sort: SortMode;
   onSort: (sort: SortMode) => void;
   orphans: Set<string>;
@@ -56,30 +61,39 @@ export function ListView({
   );
 
   return (
-    <div className="@container h-full overflow-y-auto px-4 py-3">
-      <div className="mb-1 flex items-center justify-end">
-        <SortSelect sort={sort} onSort={onSort} />
+    <div className="@container flex h-full flex-col">
+      <BrowseHeader
+        shown={files.length}
+        total={total}
+        query={query}
+        sort={sort}
+        onSort={onSort}
+      />
+      {/* No top padding on the scroll box itself: `sticky top-0`
+          resolves against its padding edge, so any would leave a
+          band above the section headers for rows to show through. */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8">
+        {files.length === 0 ? (
+          <p className="py-16 text-center text-xs text-muted-foreground/60">
+            no mod matches
+          </p>
+        ) : (
+          <div className="flex flex-col gap-6 pt-3">
+            {section(
+              "mods",
+              files
+                .filter((f) => !dependencySet.has(f.fileName))
+                .toSorted(comparator),
+            )}
+            {section(
+              "dependencies",
+              files
+                .filter((f) => dependencySet.has(f.fileName))
+                .toSorted(comparator),
+            )}
+          </div>
+        )}
       </div>
-      {files.length === 0 ? (
-        <p className="py-16 text-center text-xs text-muted-foreground/60">
-          no mod matches
-        </p>
-      ) : (
-        <div className="flex flex-col gap-6 pb-8">
-          {section(
-            "mods",
-            files
-              .filter((f) => !dependencySet.has(f.fileName))
-              .toSorted(comparator),
-          )}
-          {section(
-            "dependencies",
-            files
-              .filter((f) => dependencySet.has(f.fileName))
-              .toSorted(comparator),
-          )}
-        </div>
-      )}
     </div>
   );
 }

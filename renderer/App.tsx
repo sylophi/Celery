@@ -225,6 +225,8 @@ export function App() {
   // they are drawing.
   const browseProps = {
     files: visible,
+    total: scope.length,
+    query,
     sort,
     onSort: changeSort,
     orphans,

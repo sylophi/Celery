@@ -22,7 +22,10 @@ export function BrowseSection({
   if (count === 0) return null;
   return (
     <section>
-      <div className="sticky top-0 z-10 -mx-1 mb-2 flex items-baseline gap-2 border-b border-border bg-background/85 px-1 py-1.5 backdrop-blur-sm">
+      {/* Bleeds to the scroll container's own padding (both browse views
+          use px-4) and paints opaque: a translucent header let the rows
+          passing under it smear through. */}
+      <div className="sticky top-0 z-10 -mx-4 mb-2 flex items-baseline gap-2 border-b border-border bg-background px-4 py-1.5">
         <h2 className="text-[11px] font-semibold tracking-wide text-foreground uppercase">
           {label}
         </h2>
