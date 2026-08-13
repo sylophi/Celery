@@ -12,11 +12,9 @@ import { ConfirmDialog, type PendingAction } from "@/components/ConfirmDialog";
 import { DetailPanel, GhostPanel } from "@/components/DetailPanel";
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
-import {
-  isSortMode,
-  ListView,
-  type SortMode,
-} from "@/components/list/ListView";
+import { GridView } from "@/components/browse/GridView";
+import { ListView } from "@/components/browse/ListView";
+import { isSortMode, type SortMode } from "@/components/browse/sort";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { StatusPill, type Status } from "@/components/StatusPill";
 import {
@@ -52,9 +50,10 @@ export function App() {
   const overview = useRemoteOverview(Boolean(folder));
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [view, setView] = useState<View>(() =>
-    localStorage.getItem(VIEW_STORAGE_KEY) === "list" ? "list" : "graph",
-  );
+  const [view, setView] = useState<View>(() => {
+    const stored = localStorage.getItem(VIEW_STORAGE_KEY);
+    return stored === "grid" || stored === "list" ? stored : "graph";
+  });
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>(() => {
@@ -81,8 +80,9 @@ export function App() {
       .filter(([, remote]) => remote.updateAvailable)
       .map(([fileName]) => fileName),
   );
-  const categoryOf = (fileName: string) =>
-    overview.data?.byFile[fileName]?.category;
+  // How each zip maps onto GameBanana: its category, whether a newer
+  // build exists, and the mod Name the artwork is fetched under.
+  const remoteOf = (fileName: string) => overview.data?.byFile[fileName];
 
   // Which mods count as "dependencies" (vs top-level mods you play):
   // hard dependents only (a mod that is merely optionally referenced
@@ -224,6 +224,20 @@ export function App() {
     );
   };
 
+  // The grid and the list differ in how they draw a mod, not in what
+  // they are drawing.
+  const browseProps = {
+    files: visible,
+    sort,
+    onSort: changeSort,
+    orphans,
+    updates,
+    dependencySet,
+    remoteOf,
+    selectedId,
+    onSelect: setSelectedId,
+  };
+
   const selectedFile =
     selectedId && index ? (index.byFileName.get(selectedId) ?? null) : null;
   const selectedGhost =
@@ -286,19 +300,10 @@ export function App() {
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                 />
+              ) : view === "grid" ? (
+                <GridView {...browseProps} index={index} />
               ) : (
-                <ListView
-                  files={visible}
-                  sort={sort}
-                  onSort={changeSort}
-                  orphans={orphans}
-                  updates={updates}
-                  index={index}
-                  dependencySet={dependencySet}
-                  categoryOf={categoryOf}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                />
+                <ListView {...browseProps} index={index} />
               ))
             )}
             {selectedGhost && index && (

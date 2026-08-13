@@ -12,8 +12,9 @@ mods.
 
 ## Features
 
-- **Two views** over the same mods, switched from the toolbar: the dependency
-  graph, and a launcher-style grid for when you just want to find something.
+- **Three views** over the same mods, switched from the toolbar: the dependency
+  graph, a grid of cover art for finding something by sight, and a dense list
+  with the columns you would otherwise open each mod to compare.
 - **Dependency graph**: every top-level mod sits in its own island with the
   helpers only it uses; helpers several mods share move to a shelf below,
   labelled with how many mods want them. Select a mod and the view reshapes

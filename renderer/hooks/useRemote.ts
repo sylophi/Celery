@@ -18,11 +18,14 @@ export function useRemoteOverview(enabled = true) {
   });
 }
 
-export function useRemoteModInfo(name: string | undefined) {
+// One HTTP call per mod (disk-cached in main for 6h), so callers that
+// would ask for hundreds at once — the grid — pass `enabled` to hold
+// back until a tile is actually on screen.
+export function useRemoteModInfo(name: string | undefined, enabled = true) {
   return useQuery({
     queryKey: queryKeys.remoteModInfo(name ?? ""),
     queryFn: () => window.api.remote.modInfo(name!),
-    enabled: name !== undefined,
+    enabled: enabled && name !== undefined,
     staleTime: 30 * 60 * 1000,
     retry: 1,
     refetchOnWindowFocus: false,

@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import {
   LayoutGridIcon,
+  ListIcon,
   NetworkIcon,
   RefreshCwIcon,
   Settings2Icon,
@@ -16,7 +17,7 @@ import { cn, dragRegion } from "@/lib/utils";
 // platform it is running on. The status bar only borrows the same
 // padding, since nothing is overlaid down there.
 
-export type View = "graph" | "list";
+export type View = "graph" | "grid" | "list";
 export type Filter = "all" | "enabled" | "orphans";
 
 export function Toolbar({
@@ -58,10 +59,16 @@ export function Toolbar({
               icon: <NetworkIcon aria-hidden className="size-3.5" />,
             },
             {
+              value: "grid",
+              label: "grid",
+              selected: view === "grid",
+              icon: <LayoutGridIcon aria-hidden className="size-3.5" />,
+            },
+            {
               value: "list",
               label: "list",
               selected: view === "list",
-              icon: <LayoutGridIcon aria-hidden className="size-3.5" />,
+              icon: <ListIcon aria-hidden className="size-3.5" />,
             },
           ]}
           onSelect={onView}
