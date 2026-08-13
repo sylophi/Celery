@@ -183,42 +183,67 @@ export const remoteHandlers: Handlers<typeof remoteContract, HandlerContext> = {
     return { installed, failed };
   },
 
-  update: async ({ fileName }) => {
+  update: async ({ fileNames }) => {
     const config = await readGlobalConfig();
     if (!config.modsFolder) throw new Error("No Mods folder configured");
-    const snapshot = await scanModsFolder(config.modsFolder);
-    const file = snapshot.files.find((f) => f.fileName === fileName);
-    if (!file) throw new Error(`Unknown mod file: ${fileName}`);
+    const folder = config.modsFolder;
+    const snapshot = await scanModsFolder(folder);
     const db = await updateDb();
     if (!db) throw new Error("Update database unavailable");
-    const entry = file.entries.find((e) => db.has(e.name));
-    if (!entry) throw new Error(`${fileName} is not in the update database`);
-    const dbEntry = db.get(entry.name)!;
-    try {
-      const verified = await fetchVerified(
-        entry.name,
-        dbEntry,
-        progressReporter(entry.name),
-      );
-      send({
-        id: entry.name,
-        phase: "verifying",
-        receivedBytes: 0,
-        totalBytes: 0,
-      });
-      // Same fileName: blacklist.txt and favorites.txt keep working
-      // without a rewrite, exactly like Everest's in-game updater.
-      await placeInMods(verified, config.modsFolder, fileName);
-      send({ id: entry.name, phase: "done", receivedBytes: 0, totalBytes: 0 });
-    } catch (error) {
-      send({
-        id: entry.name,
-        phase: "error",
-        receivedBytes: 0,
-        totalBytes: 0,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
+
+    const updated: string[] = [];
+    const failed: { fileName: string; error: string }[] = [];
+    // Sequential, like install: one download at a time is kind to the
+    // mirror and keeps progress reporting legible.
+    for (const fileName of fileNames) {
+      const file = snapshot.files.find((f) => f.fileName === fileName);
+      const entry = file?.entries.find((e) => db.has(e.name));
+      if (!file || !entry) {
+        failed.push({
+          fileName,
+          error: file
+            ? `${fileName} is not in the update database`
+            : `Unknown mod file: ${fileName}`,
+        });
+        continue;
+      }
+      const dbEntry = db.get(entry.name)!;
+      try {
+        // oxlint-disable-next-line no-await-in-loop
+        const verified = await fetchVerified(
+          entry.name,
+          dbEntry,
+          progressReporter(entry.name),
+        );
+        send({
+          id: entry.name,
+          phase: "verifying",
+          receivedBytes: 0,
+          totalBytes: 0,
+        });
+        // Same fileName: blacklist.txt and favorites.txt keep working
+        // without a rewrite, exactly like Everest's in-game updater.
+        // oxlint-disable-next-line no-await-in-loop
+        await placeInMods(verified, folder, fileName);
+        send({
+          id: entry.name,
+          phase: "done",
+          receivedBytes: 0,
+          totalBytes: 0,
+        });
+        updated.push(fileName);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        send({
+          id: entry.name,
+          phase: "error",
+          receivedBytes: 0,
+          totalBytes: 0,
+          error: message,
+        });
+        failed.push({ fileName, error: message });
+      }
     }
+    return { updated, failed };
   },
 };

@@ -73,6 +73,16 @@ export const InstallResultSchema = z.object({
 });
 export type InstallResult = z.infer<typeof InstallResultSchema>;
 
+// Outcome of a batch update. Same shape as a batch trash: partial
+// failure is normal (a mid-download drop, or Windows refusing to
+// replace a zip the running game holds open), so it is reported per
+// file instead of failing everything.
+export const UpdateResultSchema = z.object({
+  updated: z.array(z.string()),
+  failed: z.array(z.object({ fileName: z.string(), error: z.string() })),
+});
+export type UpdateResult = z.infer<typeof UpdateResultSchema>;
+
 // Download progress broadcast while installs/updates run. `id` is the
 // mod Name being fetched; total is 0 when the server sent no length.
 export const RemoteProgressSchema = z.object({

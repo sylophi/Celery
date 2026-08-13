@@ -18,6 +18,7 @@ import {
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
 import { OrphanDialog } from "@/components/OrphanCleanup";
+import { UpdateDialog, type Outdated } from "@/components/UpdateReview";
 import { GridView } from "@/components/browse/GridView";
 import { ListView } from "@/components/browse/ListView";
 import { isSortMode, type SortMode } from "@/components/browse/sort";
@@ -33,7 +34,11 @@ import {
   useRemoveMods,
   useSetEnabled,
 } from "@/hooks/useMods";
-import { useRemoteOverview } from "@/hooks/useRemote";
+import {
+  useRemoteOverview,
+  useRemoteProgress,
+  useUpdateMods,
+} from "@/hooks/useRemote";
 import { queryKeys } from "@/lib/queryKeys";
 import { displayName, dragRegion } from "@/lib/utils";
 
@@ -50,6 +55,8 @@ export function App() {
   const folderState = folderStateQuery.data ?? EMPTY_FOLDER_STATE;
   const setEnabled = useSetEnabled();
   const removeMods = useRemoveMods();
+  const updateMods = useUpdateMods();
+  const progress = useRemoteProgress();
   const overview = useRemoteOverview(Boolean(folder));
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -65,6 +72,7 @@ export function App() {
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [updatesOpen, setUpdatesOpen] = useState(false);
   const [status, setStatus] = useState<Status | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -240,6 +248,34 @@ export function App() {
   const orphanFiles = (index?.files ?? []).filter((f) =>
     orphans.has(f.fileName),
   );
+  const outdated: Outdated[] = (index?.files ?? []).flatMap((file) => {
+    const remote = remoteOf(file.fileName);
+    return remote?.updateAvailable === true ? [{ file, remote }] : [];
+  });
+
+  const runUpdate = (fileNames: string[]) => {
+    updateMods.mutate(fileNames, {
+      onSuccess: (result) => {
+        // Only close once everything worked: a failed row has to stay
+        // on screen with its reason attached.
+        if (result.failed.length === 0) setUpdatesOpen(false);
+        setStatus((prev) => ({
+          text:
+            result.failed.length > 0
+              ? `updated ${result.updated.length}, ${result.failed.length} failed`
+              : `updated ${result.updated.length} mods`,
+          kind: result.failed.length > 0 ? "error" : "ok",
+          nonce: (prev?.nonce ?? 0) + 1,
+        }));
+      },
+      onError: (error) =>
+        setStatus((prev) => ({
+          text: `couldn't update: ${error instanceof Error ? error.message : String(error)}`,
+          kind: "error",
+          nonce: (prev?.nonce ?? 0) + 1,
+        })),
+    });
+  };
 
   // Trashing is reported rather than announced: a partial failure (the
   // game holding a zip open) has to be visible, not swallowed.
@@ -389,6 +425,7 @@ export function App() {
             enabled={modsQuery.data?.files.filter((f) => f.enabled).length ?? 0}
             updates={updates.size}
             orphans={orphans.size}
+            onReviewUpdates={() => setUpdatesOpen(true)}
             onReviewOrphans={() => setCleanupOpen(true)}
           />
         </>
@@ -416,6 +453,14 @@ export function App() {
           apply(pending.changes, pending.message);
           setPending(null);
         }}
+      />
+      <UpdateDialog
+        open={updatesOpen}
+        outdated={outdated}
+        busy={updateMods.isPending}
+        progress={progress}
+        onClose={() => setUpdatesOpen(false)}
+        onUpdate={runUpdate}
       />
       <OrphanDialog
         open={cleanupOpen}

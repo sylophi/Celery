@@ -6,6 +6,7 @@ import {
   RemoteModInfoSchema,
   RemoteOverviewSchema,
   RemoteProgressSchema,
+  UpdateResultSchema,
 } from "../../schemas/remote";
 
 export const remoteContract = {
@@ -33,8 +34,14 @@ export const remoteContract = {
     z.object({ names: z.array(z.string()) }),
     InstallResultSchema,
   ),
-  // Replaces an installed zip with the database's latest build, same
-  // fileName, so blacklist/favorites entries stay valid untouched.
-  update: invoke("remote:update", z.object({ fileName: z.string() }), z.void()),
+  // Replaces installed zips with the database's latest build, keeping
+  // each fileName so blacklist/favorites entries stay valid untouched.
+  // Takes a batch because updating is usually a sweep; one mod is just
+  // a batch of one.
+  update: invoke(
+    "remote:update",
+    z.object({ fileNames: z.array(z.string()) }),
+    UpdateResultSchema,
+  ),
   progress: broadcast("remote:progress", RemoteProgressSchema),
 } as const;

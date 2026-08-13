@@ -23,7 +23,7 @@ import {
   useRemoteOverview,
   useRemoteProgress,
   useResolveMissing,
-  useUpdateMod,
+  useUpdateMods,
 } from "@/hooks/useRemote";
 import { ModIconGlyph, TagIconGlyph, tagsBeyondCategory } from "@/lib/modIcons";
 import { cn, displayName, formatBytes } from "@/lib/utils";
@@ -77,7 +77,7 @@ export function DetailPanel({
   const remoteInfo = useRemoteModInfo(
     remoteStatus?.name ?? file.entries[0]?.name,
   );
-  const updateMod = useUpdateMod();
+  const updateMod = useUpdateMods();
   const progress = useRemoteProgress();
   const updateProgress = remoteStatus
     ? progress.get(remoteStatus.name)
@@ -188,7 +188,7 @@ export function DetailPanel({
               variant="outline"
               className="w-full"
               disabled={updating}
-              onClick={() => updateMod.mutate(file.fileName)}
+              onClick={() => updateMod.mutate([file.fileName])}
             >
               <DownloadIcon className="size-3.5" />
               {updating

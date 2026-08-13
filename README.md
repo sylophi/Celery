@@ -26,9 +26,12 @@ mods.
   takes down everything enabled that would break without it. Cascades apply
   immediately; a setting turns on preview-before-write.
 - **Orphan detection**: enabled helpers/asset packs that no enabled mod
-  references, i.e. load time spent on nothing. The status bar keeps the
-  count; clicking it opens a review — tick what you want gone, then
-  disable it or move the zips to the OS trash.
+  references, i.e. load time spent on nothing.
+- **Reviews from the status bar**: the two counts that ask something of
+  you are buttons. Orphans opens a cleanup — tick what you want gone,
+  then disable it or move the zips to the OS trash. Updates opens a bulk
+  updater against Everest's database, replacing each zip under its own
+  file name so enabled state and favourites survive.
 - **Mods vs dependencies**: top-level mods (the things you play) are separated
   from the infrastructure, with per-mod overrides.
 - **Favorites, structural tags** (helper / map-pack / collab / skin / audio /

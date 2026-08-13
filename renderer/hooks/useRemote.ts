@@ -61,10 +61,12 @@ export function useInstallMods() {
   });
 }
 
-export function useUpdateMod() {
+// A batch, since updating is usually a sweep; the detail panel just
+// passes one.
+export function useUpdateMods() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (fileName: string) => window.api.remote.update(fileName),
+    mutationFn: (fileNames: string[]) => window.api.remote.update(fileNames),
     onSettled: () => invalidateAfterFilesChanged(queryClient),
   });
 }

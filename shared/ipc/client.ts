@@ -48,7 +48,7 @@ export const remote = {
   modInfo: (name: string) => remoteClient.modInfo({ name }),
   resolveMissing: (names: string[]) => remoteClient.resolveMissing({ names }),
   install: (names: string[]) => remoteClient.install({ names }),
-  update: (fileName: string) => remoteClient.update({ fileName }),
+  update: (fileNames: string[]) => remoteClient.update({ fileNames }),
   onProgress: remoteClient.progress,
 } as const;
 

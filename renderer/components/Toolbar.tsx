@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { dragRegion } from "@/lib/utils";
+import { cn, dragRegion } from "@/lib/utils";
 
 // The app's chrome: which view you are in and the two global actions on
 // top, what is being counted along the bottom. The top bar stands in for
@@ -120,16 +120,17 @@ export function Toolbar({
   );
 }
 
-// A readout, not a control panel — except for orphans, which is the one
-// number here that asks something of you. Clicking it opens the cleanup
-// review, so the count and the thing you do about it are the same
-// target; everything else is text and looks like it.
+// A readout, not a control panel — except for the two counts that ask
+// something of you. Those are chips, and clicking one opens its review,
+// so the number and the thing you do about it are the same target. The
+// rest is text and looks like it.
 export function StatusBar({
   folder,
   total,
   enabled,
   updates,
   orphans,
+  onReviewUpdates,
   onReviewOrphans,
 }: {
   folder: string;
@@ -137,6 +138,7 @@ export function StatusBar({
   enabled: number;
   updates: number;
   orphans: number;
+  onReviewUpdates: () => void;
   onReviewOrphans: () => void;
 }) {
   return (
@@ -148,24 +150,51 @@ export function StatusBar({
         {total} mods, {enabled} enabled
       </span>
       {updates > 0 && (
-        <span
-          className="tabular shrink-0 text-[10px] text-muted-foreground/60"
-          title="newer builds exist on GameBanana"
+        <CountChip
+          onClick={onReviewUpdates}
+          title="review the newer builds on GameBanana"
         >
           {updates} updates
-        </span>
+        </CountChip>
       )}
       {orphans > 0 && (
-        <button
-          type="button"
+        <CountChip
+          tone="warn"
           onClick={onReviewOrphans}
           title="review what nothing enabled needs"
-          className="tabular flex shrink-0 cursor-pointer items-center gap-1 rounded border border-warn/40 px-1.5 py-px text-[10px] text-warn transition-colors outline-none hover:bg-warn/10 focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {orphans} orphans
-          <ChevronRightIcon aria-hidden className="size-2.5" />
-        </button>
+        </CountChip>
       )}
     </footer>
+  );
+}
+
+function CountChip({
+  tone,
+  title,
+  onClick,
+  children,
+}: {
+  tone?: "warn";
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "tabular flex shrink-0 cursor-pointer items-center gap-1 rounded border px-1.5 py-px text-[10px] transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        tone === "warn"
+          ? "border-warn/40 text-warn hover:bg-warn/10"
+          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+    >
+      {children}
+      <ChevronRightIcon aria-hidden className="size-2.5" />
+    </button>
   );
 }
