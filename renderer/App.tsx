@@ -12,18 +12,13 @@ import { ConfirmDialog, type PendingAction } from "@/components/ConfirmDialog";
 import { DetailPanel, GhostPanel } from "@/components/DetailPanel";
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
-import { OrphanBar, OrphanDialog } from "@/components/OrphanCleanup";
+import { OrphanDialog } from "@/components/OrphanCleanup";
 import { GridView } from "@/components/browse/GridView";
 import { ListView } from "@/components/browse/ListView";
 import { isSortMode, type SortMode } from "@/components/browse/sort";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { StatusPill, type Status } from "@/components/StatusPill";
-import {
-  StatusBar,
-  Toolbar,
-  type Filter,
-  type View,
-} from "@/components/Toolbar";
+import { StatusBar, Toolbar, type View } from "@/components/Toolbar";
 import { EMPTY_FOLDER_STATE } from "@shared/schemas";
 import {
   useConfig,
@@ -57,7 +52,6 @@ export function App() {
     const stored = localStorage.getItem(VIEW_STORAGE_KEY);
     return stored === "graph" || stored === "list" ? stored : "grid";
   });
-  const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>(() => {
     const stored = localStorage.getItem(SORT_STORAGE_KEY);
@@ -100,23 +94,17 @@ export function App() {
     if (section === "dependency") dependencySet.add(file.fileName);
   }
 
-  // Two sets, because narrowing means two different things. `scope` is
-  // what exists at all right now; `visible` is what the views show,
-  // narrowed further to the orphan shortlist or a search. The graph
-  // needs both: it lays out `visible`, but a focused mod reaches into
-  // `scope` for its real context.
+  // A search narrows what the views SHOW, not what a focused mod may
+  // reach: searching "cat" and opening Cat_Isle should still lay out its
+  // whole dependency tree, so the graph gets both sets.
   const query = search.trim().toLowerCase();
-  const scope = (index?.files ?? []).filter(
-    (file) => filter !== "enabled" || file.enabled,
-  );
-  const visible = scope.filter((file) => {
-    if (filter === "orphans" && !orphans.has(file.fileName)) return false;
-    if (query === "") return true;
-    return (
+  const scope = index?.files ?? [];
+  const visible = scope.filter(
+    (file) =>
+      query === "" ||
       file.fileName.toLowerCase().includes(query) ||
-      file.entries.some((entry) => entry.name.toLowerCase().includes(query))
-    );
-  });
+      file.entries.some((entry) => entry.name.toLowerCase().includes(query)),
+  );
 
   // `/` focuses search, Escape clears the selection. Skipped while
   // typing or while a dialog ([data-popup]) is open.
@@ -303,14 +291,8 @@ export function App() {
             }}
             onSettings={() => setSettingsOpen(true)}
           />
-          <main className="flex min-h-0 flex-1 flex-col">
-            {filter === "orphans" && orphanFiles.length > 0 && (
-              <OrphanBar
-                orphans={orphanFiles}
-                onReview={() => setCleanupOpen(true)}
-              />
-            )}
-            <div className="relative min-h-0 flex-1">
+          <main className="relative min-h-0 flex-1">
+            <div className="relative size-full">
               {modsQuery.isLoading ? (
                 <ScanProgress />
               ) : modsQuery.isError ? (
@@ -342,7 +324,6 @@ export function App() {
                     visible={new Set(visible.map((f) => f.fileName))}
                     orphans={orphans}
                     dependencySet={dependencySet}
-                    orphansOnly={filter === "orphans"}
                     selectedId={selectedId}
                     onSelect={setSelectedId}
                   />
@@ -382,8 +363,7 @@ export function App() {
             enabled={modsQuery.data?.files.filter((f) => f.enabled).length ?? 0}
             updates={updates.size}
             orphans={orphans.size}
-            filter={filter}
-            onFilter={setFilter}
+            onReviewOrphans={() => setCleanupOpen(true)}
           />
         </>
       ) : (

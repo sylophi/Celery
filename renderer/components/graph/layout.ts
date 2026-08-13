@@ -225,9 +225,6 @@ export function layoutOverview(
   // the same proportions so the fit can zoom in as far as possible
   // instead of leaving a band of empty canvas down one side.
   aspect: number,
-  // What the caller narrowed `visible` down to, which is all that
-  // changes about the top region besides its contents.
-  kind: "mods" | "orphans",
 ): Layout {
   const wiring = wire(index, visible, ghostDeps);
   const all = [...visible, ...wiring.ghosts];
@@ -462,15 +459,8 @@ export function layoutOverview(
     y: ORIGIN,
     width: modsWidth + REGION_PAD * 2,
     height: modsHeight + REGION_HEADER + REGION_PAD,
-    ...(kind === "orphans"
-      ? {
-          title: "orphans",
-          note: `${roots.length} enabled, and nothing enabled needs them`,
-        }
-      : {
-          title: "mods",
-          note: `${roots.length} top-level, with what only they use`,
-        }),
+    title: "mods",
+    note: `${roots.length} top-level, with what only they use`,
     variant: "region",
   };
 

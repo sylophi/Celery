@@ -49,20 +49,15 @@ const nodeTypes = {
 type AnyFlowNode = ModFlowNode | GhostFlowNode | RegionFlowNode;
 
 // `visible` is what the overview lays out; `scope` is the wider set a
-// focused mod may reach into. They differ because narrowing to orphans
-// (or to a search) is a way of FINDING a mod, not a claim about what it
-// is connected to: focusing one still has to show its real context,
-// which for an orphan is usually the pile of disabled dependents that
-// explains why it is one.
+// focused mod may reach into. They differ because a search is a way of
+// FINDING a mod, not a claim about what it is connected to: focusing one
+// still has to show its real context.
 export type GraphProps = {
   index: ModIndex;
   scope: Set<string>;
   visible: Set<string>;
   orphans: Set<string>;
   dependencySet: Set<string>;
-  // Whether `visible` is the orphan shortlist, which the top region
-  // labels itself after.
-  orphansOnly: boolean;
   selectedId: string | null;
   onSelect: (fileName: string | null) => void;
 };
@@ -81,7 +76,6 @@ function GraphViewInner({
   visible,
   orphans,
   dependencySet,
-  orphansOnly,
   selectedId,
   onSelect,
 }: GraphProps) {
@@ -132,14 +126,7 @@ function GraphViewInner({
         ghostDeps,
         aspect,
       )
-    : layoutOverview(
-        index,
-        visible,
-        dependencySet,
-        ghostDeps,
-        aspect,
-        orphansOnly ? "orphans" : "mods",
-      );
+    : layoutOverview(index, visible, dependencySet, ghostDeps, aspect);
   const { positions, bounds, nodes: drawn, regions, drawEdge, usedBy } = layout;
 
   const nodes: AnyFlowNode[] = (() => {

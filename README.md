@@ -26,9 +26,8 @@ mods.
   takes down everything enabled that would break without it. Cascades apply
   immediately; a setting turns on preview-before-write.
 - **Orphan detection**: enabled helpers/asset packs that no enabled mod
-  references, i.e. load time spent on nothing. The status bar's counts
-  double as filters — click one to narrow any view to it — and the orphan
-  shortlist comes with a cleanup flow: tick what you want gone, then
+  references, i.e. load time spent on nothing. The status bar keeps the
+  count; clicking it opens a review — tick what you want gone, then
   disable it or move the zips to the OS trash.
 - **Mods vs dependencies**: top-level mods (the things you play) are separated
   from the infrastructure, with per-mod overrides.

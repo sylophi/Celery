@@ -6,32 +6,10 @@ import { Dialog } from "@/components/ui/dialog";
 import { cn, displayName, formatBytes } from "@/lib/utils";
 
 // Orphans are the one thing the app finds that the user is expected to
-// act on, so the shortlist comes with the action attached. Two ways out:
-// disabling stops Everest loading them and is reversible from here,
-// trashing reclaims the disk and is only reversible from the OS.
-
-export function OrphanBar({
-  orphans,
-  onReview,
-}: {
-  orphans: ModFile[];
-  onReview: () => void;
-}) {
-  const bytes = orphans.reduce((sum, file) => sum + file.sizeBytes, 0);
-  return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-border bg-warn/8 px-4 py-1.5">
-      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-        <span className="text-foreground">
-          {orphans.length} {orphans.length === 1 ? "orphan" : "orphans"}
-        </span>{" "}
-        loading for nothing, {formatBytes(bytes)} on disk
-      </span>
-      <Button variant="outline" size="sm" onClick={onReview}>
-        clean up
-      </Button>
-    </div>
-  );
-}
+// act on, so the count in the status bar opens straight into this rather
+// than into a filtered view. Two ways out: disabling stops Everest
+// loading them and is reversible from here, trashing reclaims the disk
+// and is only reversible from the OS.
 
 export function OrphanDialog({
   open,

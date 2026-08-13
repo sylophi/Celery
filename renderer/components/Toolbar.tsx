@@ -1,5 +1,6 @@
 import type { RefObject } from "react";
 import {
+  ChevronRightIcon,
   LayoutGridIcon,
   ListIcon,
   NetworkIcon,
@@ -8,7 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { cn, dragRegion } from "@/lib/utils";
+import { dragRegion } from "@/lib/utils";
 
 // The app's chrome: which view you are in and the two global actions on
 // top, what is being counted along the bottom. The top bar stands in for
@@ -18,7 +19,6 @@ import { cn, dragRegion } from "@/lib/utils";
 // padding, since nothing is overlaid down there.
 
 export type View = "grid" | "list" | "graph";
-export type Filter = "all" | "enabled" | "orphans";
 
 export function Toolbar({
   view,
@@ -120,90 +120,52 @@ export function Toolbar({
   );
 }
 
-// The counts double as the filters. "31 orphans" is a diagnostic before
-// it is a view mode, so the place it is reported is the place to act on
-// it; the same goes for how many mods are actually loaded. Clicking a
-// count narrows to it, clicking again goes back to everything.
+// A readout, not a control panel — except for orphans, which is the one
+// number here that asks something of you. Clicking it opens the cleanup
+// review, so the count and the thing you do about it are the same
+// target; everything else is text and looks like it.
 export function StatusBar({
   folder,
   total,
   enabled,
   updates,
   orphans,
-  filter,
-  onFilter,
+  onReviewOrphans,
 }: {
   folder: string;
   total: number;
   enabled: number;
   updates: number;
   orphans: number;
-  filter: Filter;
-  onFilter: (filter: Filter) => void;
+  onReviewOrphans: () => void;
 }) {
   return (
-    <footer className="flex h-6.5 shrink-0 items-center gap-2 border-t border-border px-[var(--chrome-pad)]">
+    <footer className="flex h-6.5 shrink-0 items-center gap-3 border-t border-border px-[var(--chrome-pad)]">
       <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground/60">
         {folder}
       </span>
       <span className="tabular shrink-0 text-[10px] text-muted-foreground/60">
-        {total} mods
+        {total} mods, {enabled} enabled
       </span>
-      <CountFilter
-        active={filter === "enabled"}
-        onClick={() => onFilter(filter === "enabled" ? "all" : "enabled")}
-        title="show only the mods Everest is loading"
-      >
-        {enabled} enabled
-      </CountFilter>
       {updates > 0 && (
         <span
-          className="tabular shrink-0 text-[10px] text-muted-foreground"
+          className="tabular shrink-0 text-[10px] text-muted-foreground/60"
           title="newer builds exist on GameBanana"
         >
           {updates} updates
         </span>
       )}
       {orphans > 0 && (
-        <CountFilter
-          active={filter === "orphans"}
-          tone="warn"
-          onClick={() => onFilter(filter === "orphans" ? "all" : "orphans")}
-          title="support mods nothing enabled depends on"
+        <button
+          type="button"
+          onClick={onReviewOrphans}
+          title="review what nothing enabled needs"
+          className="tabular flex shrink-0 cursor-pointer items-center gap-1 rounded border border-warn/40 px-1.5 py-px text-[10px] text-warn transition-colors outline-none hover:bg-warn/10 focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {orphans} orphans
-        </CountFilter>
+          <ChevronRightIcon aria-hidden className="size-2.5" />
+        </button>
       )}
     </footer>
-  );
-}
-
-function CountFilter({
-  active,
-  tone,
-  title,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  tone?: "warn";
-  title: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      title={title}
-      onClick={onClick}
-      className={cn(
-        "tabular shrink-0 cursor-pointer rounded px-1 text-[10px] transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-        tone === "warn" ? "text-warn" : "text-muted-foreground",
-        active ? "bg-secondary text-foreground" : "hover:bg-muted",
-      )}
-    >
-      {children}
-    </button>
   );
 }
