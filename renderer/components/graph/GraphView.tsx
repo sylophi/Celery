@@ -95,9 +95,8 @@ function GraphViewInner({
     }
   }
 
-  // A selection outside the current scope (a disabled mod picked while
-  // the enabled filter is on) still gets focused; it is what the user
-  // asked to look at.
+  // A selection from outside the current scope still gets focused; it
+  // is what the user asked to look at.
   const focused =
     selectedId !== null && (scope.has(selectedId) || isGhostId(selectedId))
       ? selectedId
