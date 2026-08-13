@@ -6,6 +6,10 @@ import { ThemeProvider } from "./hooks/useTheme";
 import "./index.css";
 
 document.documentElement.dataset["platform"] = window.api.platform;
+document.documentElement.style.setProperty(
+  "--chrome-inset-start",
+  `${window.api.chromeInsetStart}px`,
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {

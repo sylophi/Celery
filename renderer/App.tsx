@@ -236,9 +236,6 @@ export function App() {
           <Toolbar
             view={view}
             onView={changeView}
-            filter={filter}
-            onFilter={setFilter}
-            orphanCount={orphans.size}
             search={search}
             onSearch={setSearch}
             searchRef={searchRef}
@@ -333,6 +330,8 @@ export function App() {
             enabled={modsQuery.data?.files.filter((f) => f.enabled).length ?? 0}
             updates={updates.size}
             orphans={orphans.size}
+            filter={filter}
+            onFilter={setFilter}
           />
         </>
       ) : (

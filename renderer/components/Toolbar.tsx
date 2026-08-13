@@ -9,24 +9,19 @@ import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { cn, dragRegion } from "@/lib/utils";
 
-// The app's one chrome bar: which view you are in, what it is showing,
-// and the two global actions. It also stands in for the title bar, so
-// it carries the drag region and keeps clear of the native window
-// buttons — macOS traffic lights on the left by a fixed inset, Windows
-// caption buttons on the right via `[data-titlebar]` in the stylesheet,
-// which reads their real width out of the Window Controls Overlay.
+// The app's chrome: which view you are in and the two global actions on
+// top, what is being counted along the bottom. The top bar stands in for
+// the native title bar, so it carries `data-titlebar` and the stylesheet
+// keeps it clear of the window buttons — nothing here has to know which
+// platform it is running on. The status bar only borrows the same
+// padding, since nothing is overlaid down there.
 
 export type View = "graph" | "list";
 export type Filter = "all" | "enabled" | "orphans";
 
-const isMac = window.api.platform === "darwin";
-
 export function Toolbar({
   view,
   onView,
-  filter,
-  onFilter,
-  orphanCount,
   search,
   onSearch,
   searchRef,
@@ -36,9 +31,6 @@ export function Toolbar({
 }: {
   view: View;
   onView: (view: View) => void;
-  filter: Filter;
-  onFilter: (filter: Filter) => void;
-  orphanCount: number;
   search: string;
   onSearch: (search: string) => void;
   searchRef: RefObject<HTMLInputElement | null>;
@@ -49,19 +41,13 @@ export function Toolbar({
   return (
     <header
       data-titlebar
-      className={cn(
-        "z-40 flex h-11 shrink-0 items-center gap-2.5 border-b border-border px-3",
-        isMac && "pl-[92px]",
-      )}
+      className="z-40 flex h-11 shrink-0 items-center gap-2.5 border-b border-border"
       style={dragRegion("drag")}
     >
-      <span className="shrink-0 pr-0.5 text-[13px] font-semibold tracking-tight">
+      <span className="shrink-0 text-[13px] font-semibold tracking-tight">
         Celery
       </span>
-      <div
-        className="flex shrink-0 items-center gap-2"
-        style={dragRegion("no-drag")}
-      >
+      <div className="shrink-0" style={dragRegion("no-drag")}>
         <SegmentedControl<View>
           size="md"
           options={[
@@ -80,26 +66,9 @@ export function Toolbar({
           ]}
           onSelect={onView}
         />
-        <SegmentedControl<Filter>
-          options={[
-            { value: "all", label: "all", selected: filter === "all" },
-            {
-              value: "enabled",
-              label: "enabled",
-              selected: filter === "enabled",
-            },
-            {
-              value: "orphans",
-              label: `orphans${orphanCount > 0 ? ` ${orphanCount}` : ""}`,
-              selected: filter === "orphans",
-            },
-          ]}
-          onSelect={onFilter}
-        />
       </div>
-      {/* Everything right of here shrinks before anything wraps: the
-          window's 800px minimum has to hold the whole bar, caption
-          buttons included. */}
+      {/* Everything right of here shrinks first, so the bar survives the
+          window's 800px minimum with either platform's buttons on it. */}
       <div
         className="flex min-w-0 flex-1 items-center justify-end gap-2"
         style={dragRegion("no-drag")}
@@ -116,7 +85,7 @@ export function Toolbar({
           }}
           placeholder="search mods"
           spellCheck={false}
-          className="h-7 w-full max-w-48 min-w-24 rounded-md border border-input bg-transparent px-2 text-xs text-foreground transition-colors outline-none placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+          className="h-7 w-full max-w-56 min-w-24 rounded-md border border-input bg-transparent px-2 text-xs text-foreground transition-colors outline-none placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
         />
         <Button
           variant="ghost"
@@ -142,27 +111,42 @@ export function Toolbar({
   );
 }
 
+// The counts double as the filters. "31 orphans" is a diagnostic before
+// it is a view mode, so the place it is reported is the place to act on
+// it; the same goes for how many mods are actually loaded. Clicking a
+// count narrows to it, clicking again goes back to everything.
 export function StatusBar({
   folder,
   total,
   enabled,
   updates,
   orphans,
+  filter,
+  onFilter,
 }: {
   folder: string;
   total: number;
   enabled: number;
   updates: number;
   orphans: number;
+  filter: Filter;
+  onFilter: (filter: Filter) => void;
 }) {
   return (
-    <footer className="flex h-6 shrink-0 items-center gap-3 border-t border-border px-4">
+    <footer className="flex h-6.5 shrink-0 items-center gap-2 border-t border-border px-[var(--chrome-pad)]">
       <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground/60">
         {folder}
       </span>
-      <span className="tabular shrink-0 text-[10px] text-muted-foreground/70">
-        {total} mods, {enabled} enabled
+      <span className="tabular shrink-0 text-[10px] text-muted-foreground/60">
+        {total} mods
       </span>
+      <CountFilter
+        active={filter === "enabled"}
+        onClick={() => onFilter(filter === "enabled" ? "all" : "enabled")}
+        title="show only the mods Everest is loading"
+      >
+        {enabled} enabled
+      </CountFilter>
       {updates > 0 && (
         <span
           className="tabular shrink-0 text-[10px] text-muted-foreground"
@@ -172,13 +156,45 @@ export function StatusBar({
         </span>
       )}
       {orphans > 0 && (
-        <span
-          className="tabular shrink-0 text-[10px] text-warn"
+        <CountFilter
+          active={filter === "orphans"}
+          tone="warn"
+          onClick={() => onFilter(filter === "orphans" ? "all" : "orphans")}
           title="support mods nothing enabled depends on"
         >
           {orphans} orphans
-        </span>
+        </CountFilter>
       )}
     </footer>
+  );
+}
+
+function CountFilter({
+  active,
+  tone,
+  title,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  tone?: "warn";
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      title={title}
+      onClick={onClick}
+      className={cn(
+        "tabular shrink-0 cursor-pointer rounded px-1 text-[10px] transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        tone === "warn" ? "text-warn" : "text-muted-foreground",
+        active ? "bg-secondary text-foreground" : "hover:bg-muted",
+      )}
+    >
+      {children}
+    </button>
   );
 }

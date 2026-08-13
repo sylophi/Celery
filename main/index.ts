@@ -6,6 +6,7 @@ import { attachContextMenu } from "./electron/contextMenu";
 import { startUpdater } from "./electron/updater";
 import { ensureCeleryRoot, initCeleryRoot } from "./lib/util/paths";
 import { isMac, isWindows } from "./lib/util/platform";
+import { TRAFFIC_LIGHT_POSITION } from "@shared/chrome";
 
 // A stable explicit AppUserModelID keeps taskbar grouping and pins
 // working for the portable Windows build (the default AUMID is derived
@@ -51,7 +52,7 @@ const createWindow = () => {
     ...(isMac
       ? {
           titleBarStyle: "hiddenInset" as const,
-          trafficLightPosition: { x: 16, y: 18 },
+          trafficLightPosition: TRAFFIC_LIGHT_POSITION,
           backgroundColor: chromeColors().backgroundColor,
         }
       : isWindows

@@ -38,6 +38,10 @@
   --ring: var(--color-neutral-400);
   --radius: 0.625rem;
 
+  /* Breathing room at the ends of the toolbar and status bar, and the
+     floor the native-window-button insets are measured against. */
+  --chrome-pad: 12px;
+
   /* Domain tokens: chrome stays monochrome; color lives in the graph.
      Each colored token defends its exception. */
   /* Enabled state is the one thing worth a hue everywhere it appears
@@ -178,16 +182,33 @@
   }
 }
 
-/* Windows paints its caption buttons over the top-right of the client
-   area. The Window Controls Overlay reports the draggable strip it left
-   us, so the room to reserve is whatever it did NOT leave — correct at
-   any display scaling, unlike a hardcoded inset. The fallback resolves
-   the same calc back to a plain 140px.
+/* The one rule that knows about native window buttons.
+   
+   Both platforms overlay theirs on the app's toolbar, just at opposite
+   ends: macOS traffic lights lead, Windows caption buttons trail. Each
+   side arrives as an inset custom property, and the bar pads by
+   whichever is larger — its own padding, or what the OS has claimed. So
+   there is one mechanism rather than one hack per platform, and a bar
+   that needs no per-platform markup.
 
-   Unlayered on purpose: it has to beat the `px-3` utility on the same
-   element, and Tailwind's utilities are in a layer. */
+   `--chrome-inset-start` is published by the renderer's entry point from
+   the geometry main used to place the traffic lights. `--chrome-inset-end`
+   is the Window Controls Overlay's own measurement: it reports the
+   draggable strip it left us, so the room to keep clear is whatever it
+   did not — correct at any display scaling, where a fixed number is only
+   correct at 100%. The fallback resolves the same calc back to 140px.
+
+   Unlayered so it beats Tailwind's utilities; logical properties so a
+   mirrored UI would still put the padding on the right edge. */
+[data-titlebar] {
+  padding-inline-start: max(var(--chrome-inset-start, 0px), var(--chrome-pad));
+  padding-inline-end: max(var(--chrome-inset-end, 0px), var(--chrome-pad));
+}
 [data-platform="win32"] [data-titlebar] {
-  padding-right: calc(100% - env(titlebar-area-width, calc(100% - 140px)));
+  /* Percentage padding resolves against the containing block's width,
+     which for a full-width bar is the window — the same thing the
+     overlay measures against. */
+  --chrome-inset-end: calc(100% - env(titlebar-area-width, calc(100% - 140px)));
 }
 
 /* Status pill: visible, hold, then fade. Fully CSS-driven so the

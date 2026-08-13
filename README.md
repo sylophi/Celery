@@ -25,7 +25,8 @@ mods.
   takes down everything enabled that would break without it. Cascades apply
   immediately; a setting turns on preview-before-write.
 - **Orphan detection**: enabled helpers/asset packs that no enabled mod
-  references, i.e. load time spent on nothing.
+  references, i.e. load time spent on nothing. The status bar's counts
+  double as filters — click one to narrow either view to it.
 - **Mods vs dependencies**: top-level mods (the things you play) are separated
   from the infrastructure, with per-mod overrides.
 - **Favorites, structural tags** (helper / map-pack / collab / skin / audio /
