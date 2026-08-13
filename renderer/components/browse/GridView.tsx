@@ -7,6 +7,7 @@ import { useOnScreen } from "@/hooks/useOnScreen";
 import { useRemoteModInfo } from "@/hooks/useRemote";
 import { ModIconGlyph } from "@/lib/modIcons";
 import { cn, displayName } from "@/lib/utils";
+import { BrowseSection } from "./Section";
 import { makeComparator, SortSelect, type SortMode } from "./sort";
 
 // The gallery: mods as their own artwork, which is how anyone actually
@@ -38,33 +39,24 @@ export function GridView({
   onSelect: (fileName: string | null) => void;
 }) {
   const comparator = makeComparator(sort, (f) => remoteOf(f)?.category);
-  const section = (label: string, list: ModFile[]) =>
-    list.length === 0 ? null : (
-      <section>
-        <div className="mb-2 flex items-end justify-between px-1">
-          <h2 className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-            {label}
-          </h2>
-          <span className="tabular text-[10px] text-muted-foreground/60">
-            {list.length}
-          </span>
-        </div>
-        <ul className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
-          {list.map((file) => (
-            <ModCard
-              key={file.fileName}
-              file={file}
-              remote={remoteOf(file.fileName)}
-              selected={file.fileName === selectedId}
-              orphan={orphans.has(file.fileName)}
-              updateAvailable={updates.has(file.fileName)}
-              missing={index.missing.get(file.fileName)?.length ?? 0}
-              onSelect={onSelect}
-            />
-          ))}
-        </ul>
-      </section>
-    );
+  const section = (label: "mods" | "dependencies", list: ModFile[]) => (
+    <BrowseSection label={label} count={list.length}>
+      <ul className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
+        {list.map((file) => (
+          <ModCard
+            key={file.fileName}
+            file={file}
+            remote={remoteOf(file.fileName)}
+            selected={file.fileName === selectedId}
+            orphan={orphans.has(file.fileName)}
+            updateAvailable={updates.has(file.fileName)}
+            missing={index.missing.get(file.fileName)?.length ?? 0}
+            onSelect={onSelect}
+          />
+        ))}
+      </ul>
+    </BrowseSection>
+  );
 
   return (
     <div className="h-full overflow-y-auto px-5 py-3">
@@ -76,7 +68,7 @@ export function GridView({
           no mod matches
         </p>
       ) : (
-        <div className="flex flex-col gap-6 pb-8">
+        <div className="flex flex-col gap-7 pb-8">
           {section(
             "mods",
             files

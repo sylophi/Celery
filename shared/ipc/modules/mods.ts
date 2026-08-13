@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { invoke } from "../contract";
-import { ModsSnapshotSchema } from "../../schemas/mods";
+import { ModsSnapshotSchema, RemoveResultSchema } from "../../schemas/mods";
 
 export const modsContract = {
   // Scans the configured Mods folder (manifest reads are cached by file
@@ -21,5 +21,13 @@ export const modsContract = {
     "mods:setFavorite",
     z.object({ fileName: z.string(), favorite: z.boolean() }),
     ModsSnapshotSchema,
+  ),
+  // Moves mod zips to the OS trash and forgets them in Everest's txt
+  // files. Deliberately not a hard delete: this is the one action here
+  // that destroys something the user cannot rebuild from the app.
+  remove: invoke(
+    "mods:remove",
+    z.object({ fileNames: z.array(z.string()) }),
+    RemoveResultSchema,
   ),
 } as const;

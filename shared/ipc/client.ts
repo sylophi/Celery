@@ -40,6 +40,7 @@ export const mods = {
     modsClient.setEnabled({ changes }),
   setFavorite: (fileName: string, favorite: boolean) =>
     modsClient.setFavorite({ fileName, favorite }),
+  remove: (fileNames: string[]) => modsClient.remove({ fileNames }),
 } as const;
 
 export const remote = {

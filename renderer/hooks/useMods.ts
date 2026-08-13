@@ -36,6 +36,22 @@ export function useSetEnabled() {
   });
 }
 
+// Files leave the folder, so the whole snapshot and everything derived
+// from it (update badges, categories) has to be refetched rather than
+// patched.
+export function useRemoveMods() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (fileNames: string[]) => window.api.mods.remove(fileNames),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.mods });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.remoteOverview,
+      });
+    },
+  });
+}
+
 export function useSetFavorite() {
   const queryClient = useQueryClient();
   return useMutation({

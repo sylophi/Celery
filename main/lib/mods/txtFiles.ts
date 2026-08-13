@@ -125,3 +125,35 @@ export async function writeFavorite(
   const eol = eolOf(raw);
   await writeAtomic(filePath, [...FAVORITES_HEADER, ...lines].join(eol) + eol);
 }
+
+// Drops files from both txt lists after their zips are gone. Everest
+// ignores lines for files that don't exist, but leaving them means a
+// zip restored from the trash would come back with its old state, and
+// the lists grow forever.
+export async function forgetFiles(
+  folder: string,
+  fileNames: string[],
+): Promise<void> {
+  const gone = new Set(fileNames);
+  // blacklist.txt lists disabled mods plainly and enabled ones behind
+  // "# ", so both forms have to go.
+  const blacklistPath = path.join(folder, BLACKLIST);
+  const blacklistRaw = await readFileOrNull(blacklistPath);
+  if (blacklistRaw !== null) {
+    const kept = blacklistRaw.split(/\r?\n/).filter((line) => {
+      const trimmed = line.trim();
+      if (trimmed.length === 0) return true;
+      return !gone.has(trimmed.replace(/^#+\s*/, ""));
+    });
+    await writeAtomic(blacklistPath, kept.join(eolOf(blacklistRaw)));
+  }
+
+  const favoritesPath = path.join(folder, FAVORITES);
+  const favoritesRaw = await readFileOrNull(favoritesPath);
+  if (favoritesRaw !== null) {
+    const kept = favoritesRaw
+      .split(/\r?\n/)
+      .filter((line) => !gone.has(line.trim()));
+    await writeAtomic(favoritesPath, kept.join(eolOf(favoritesRaw)));
+  }
+}

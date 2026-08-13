@@ -27,7 +27,9 @@ mods.
   immediately; a setting turns on preview-before-write.
 - **Orphan detection**: enabled helpers/asset packs that no enabled mod
   references, i.e. load time spent on nothing. The status bar's counts
-  double as filters — click one to narrow either view to it.
+  double as filters — click one to narrow any view to it — and the orphan
+  shortlist comes with a cleanup flow: tick what you want gone, then
+  disable it or move the zips to the OS trash.
 - **Mods vs dependencies**: top-level mods (the things you play) are separated
   from the infrastructure, with per-mod overrides.
 - **Favorites, structural tags** (helper / map-pack / collab / skin / audio /

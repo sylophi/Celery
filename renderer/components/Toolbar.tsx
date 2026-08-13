@@ -17,7 +17,7 @@ import { cn, dragRegion } from "@/lib/utils";
 // platform it is running on. The status bar only borrows the same
 // padding, since nothing is overlaid down there.
 
-export type View = "graph" | "grid" | "list";
+export type View = "grid" | "list" | "graph";
 export type Filter = "all" | "enabled" | "orphans";
 
 export function Toolbar({
@@ -51,13 +51,9 @@ export function Toolbar({
       <div className="shrink-0" style={dragRegion("no-drag")}>
         <SegmentedControl<View>
           size="md"
+          // Ordered by how often they get reached for: finding a mod
+          // first, then comparing them, then the structural view.
           options={[
-            {
-              value: "graph",
-              label: "graph",
-              selected: view === "graph",
-              icon: <NetworkIcon aria-hidden className="size-3.5" />,
-            },
             {
               value: "grid",
               label: "grid",
@@ -69,6 +65,12 @@ export function Toolbar({
               label: "list",
               selected: view === "list",
               icon: <ListIcon aria-hidden className="size-3.5" />,
+            },
+            {
+              value: "graph",
+              label: "graph",
+              selected: view === "graph",
+              icon: <NetworkIcon aria-hidden className="size-3.5" />,
             },
           ]}
           onSelect={onView}

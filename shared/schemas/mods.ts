@@ -57,3 +57,12 @@ export const ModsSnapshotSchema = z.object({
   files: z.array(ModFileSchema),
 });
 export type ModsSnapshot = z.infer<typeof ModsSnapshotSchema>;
+
+// Outcome of a trash operation. Partial failure is normal (the game
+// holding a zip open on Windows, a permissions hiccup), so failures are
+// reported per file rather than failing the whole batch.
+export const RemoveResultSchema = z.object({
+  trashed: z.array(z.string()),
+  failed: z.array(z.object({ fileName: z.string(), error: z.string() })),
+});
+export type RemoveResult = z.infer<typeof RemoveResultSchema>;

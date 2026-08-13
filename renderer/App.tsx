@@ -12,6 +12,7 @@ import { ConfirmDialog, type PendingAction } from "@/components/ConfirmDialog";
 import { DetailPanel, GhostPanel } from "@/components/DetailPanel";
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
+import { OrphanBar, OrphanDialog } from "@/components/OrphanCleanup";
 import { GridView } from "@/components/browse/GridView";
 import { ListView } from "@/components/browse/ListView";
 import { isSortMode, type SortMode } from "@/components/browse/sort";
@@ -29,6 +30,7 @@ import {
   useFolderState,
   useModIndex,
   useMods,
+  useRemoveMods,
   useSetEnabled,
 } from "@/hooks/useMods";
 import { useRemoteOverview } from "@/hooks/useRemote";
@@ -47,12 +49,13 @@ export function App() {
   const folderStateQuery = useFolderState(folder);
   const folderState = folderStateQuery.data ?? EMPTY_FOLDER_STATE;
   const setEnabled = useSetEnabled();
+  const removeMods = useRemoveMods();
   const overview = useRemoteOverview(Boolean(folder));
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<View>(() => {
     const stored = localStorage.getItem(VIEW_STORAGE_KEY);
-    return stored === "grid" || stored === "list" ? stored : "graph";
+    return stored === "graph" || stored === "list" ? stored : "grid";
   });
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
@@ -62,6 +65,7 @@ export function App() {
   });
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [cleanupOpen, setCleanupOpen] = useState(false);
   const [status, setStatus] = useState<Status | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -238,6 +242,41 @@ export function App() {
     onSelect: setSelectedId,
   };
 
+  const orphanFiles = (index?.files ?? []).filter((f) =>
+    orphans.has(f.fileName),
+  );
+
+  // Trashing is reported rather than announced: a partial failure (the
+  // game holding a zip open) has to be visible, not swallowed.
+  const cleanUp = (fileNames: string[], trash: boolean) => {
+    setCleanupOpen(false);
+    const label = `${fileNames.length} ${fileNames.length === 1 ? "orphan" : "orphans"}`;
+    if (!trash) {
+      apply(
+        fileNames.map((fileName) => ({ fileName, enabled: false })),
+        `disabled ${label}`,
+      );
+      return;
+    }
+    removeMods.mutate(fileNames, {
+      onSuccess: (result) =>
+        setStatus((prev) => ({
+          text:
+            result.failed.length > 0
+              ? `trashed ${result.trashed.length}, couldn't remove ${result.failed.length}`
+              : `moved ${label} to the trash`,
+          kind: result.failed.length > 0 ? "error" : "ok",
+          nonce: (prev?.nonce ?? 0) + 1,
+        })),
+      onError: (error) =>
+        setStatus((prev) => ({
+          text: `couldn't remove: ${error instanceof Error ? error.message : String(error)}`,
+          kind: "error",
+          nonce: (prev?.nonce ?? 0) + 1,
+        })),
+    });
+  };
+
   const selectedFile =
     selectedId && index ? (index.byFileName.get(selectedId) ?? null) : null;
   const selectedGhost =
@@ -264,70 +303,78 @@ export function App() {
             }}
             onSettings={() => setSettingsOpen(true)}
           />
-          <main className="relative min-h-0 flex-1">
-            {modsQuery.isLoading ? (
-              <ScanProgress />
-            ) : modsQuery.isError ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
-                <p className="max-w-md text-xs text-destructive">
-                  couldn't read the mods folder:{" "}
-                  {modsQuery.error instanceof Error
-                    ? modsQuery.error.message
-                    : String(modsQuery.error)}
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    void queryClient.invalidateQueries({
-                      queryKey: queryKeys.mods,
-                    })
-                  }
-                >
-                  try again
-                </Button>
-              </div>
-            ) : (
-              index &&
-              (view === "graph" ? (
-                <GraphView
-                  index={index}
-                  scope={new Set(scope.map((f) => f.fileName))}
-                  visible={new Set(visible.map((f) => f.fileName))}
-                  orphans={orphans}
-                  dependencySet={dependencySet}
-                  orphansOnly={filter === "orphans"}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                />
-              ) : view === "grid" ? (
-                <GridView {...browseProps} index={index} />
+          <main className="flex min-h-0 flex-1 flex-col">
+            {filter === "orphans" && orphanFiles.length > 0 && (
+              <OrphanBar
+                orphans={orphanFiles}
+                onReview={() => setCleanupOpen(true)}
+              />
+            )}
+            <div className="relative min-h-0 flex-1">
+              {modsQuery.isLoading ? (
+                <ScanProgress />
+              ) : modsQuery.isError ? (
+                <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
+                  <p className="max-w-md text-xs text-destructive">
+                    couldn't read the mods folder:{" "}
+                    {modsQuery.error instanceof Error
+                      ? modsQuery.error.message
+                      : String(modsQuery.error)}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      void queryClient.invalidateQueries({
+                        queryKey: queryKeys.mods,
+                      })
+                    }
+                  >
+                    try again
+                  </Button>
+                </div>
               ) : (
-                <ListView {...browseProps} index={index} />
-              ))
-            )}
-            {selectedGhost && index && (
-              <GhostPanel
-                name={selectedGhost}
-                index={index}
-                onSelect={setSelectedId}
-                onClose={() => setSelectedId(null)}
-              />
-            )}
-            {selectedFile && index && (
-              <DetailPanel
-                file={selectedFile}
-                index={index}
-                orphan={orphans.has(selectedFile.fileName)}
-                dependencySet={dependencySet}
-                folder={folder}
-                onSelect={setSelectedId}
-                onClose={() => setSelectedId(null)}
-                onToggle={(enable) =>
-                  requestToggle(selectedFile.fileName, enable)
-                }
-              />
-            )}
+                index &&
+                (view === "graph" ? (
+                  <GraphView
+                    index={index}
+                    scope={new Set(scope.map((f) => f.fileName))}
+                    visible={new Set(visible.map((f) => f.fileName))}
+                    orphans={orphans}
+                    dependencySet={dependencySet}
+                    orphansOnly={filter === "orphans"}
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                  />
+                ) : view === "grid" ? (
+                  <GridView {...browseProps} index={index} />
+                ) : (
+                  <ListView {...browseProps} index={index} />
+                ))
+              )}
+              {selectedGhost && index && (
+                <GhostPanel
+                  name={selectedGhost}
+                  index={index}
+                  onSelect={setSelectedId}
+                  onClose={() => setSelectedId(null)}
+                />
+              )}
+              {selectedFile && index && (
+                <DetailPanel
+                  file={selectedFile}
+                  index={index}
+                  orphan={orphans.has(selectedFile.fileName)}
+                  dependencySet={dependencySet}
+                  folder={folder}
+                  onSelect={setSelectedId}
+                  onClose={() => setSelectedId(null)}
+                  onToggle={(enable) =>
+                    requestToggle(selectedFile.fileName, enable)
+                  }
+                />
+              )}
+            </div>
           </main>
           <StatusBar
             folder={folder}
@@ -363,6 +410,14 @@ export function App() {
           apply(pending.changes, pending.message);
           setPending(null);
         }}
+      />
+      <OrphanDialog
+        open={cleanupOpen}
+        orphans={orphanFiles}
+        busy={removeMods.isPending || setEnabled.isPending}
+        onClose={() => setCleanupOpen(false)}
+        onDisable={(fileNames) => cleanUp(fileNames, false)}
+        onTrash={(fileNames) => cleanUp(fileNames, true)}
       />
       <SettingsDialog
         open={settingsOpen}
