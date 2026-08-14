@@ -87,7 +87,7 @@ function ModCard({
       : idle === "orphan"
         ? { className: IDLE_STYLE.orphan.dot, title: IDLE_STYLE.orphan.hint }
         : updateAvailable
-          ? { className: "bg-ring", title: "update available" }
+          ? { className: "bg-update", title: "update available" }
           : idle === "unused"
             ? {
                 className: IDLE_STYLE.unused.dot,

@@ -121,7 +121,7 @@ function ModRow({
       )}
       {updateAvailable && (
         <span
-          className="shrink-0 text-[10px] text-muted-foreground"
+          className="shrink-0 text-[10px] text-update"
           title={`GameBanana has ${remote?.latestVersion ?? "a newer build"}`}
         >
           update

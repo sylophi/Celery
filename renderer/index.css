@@ -42,12 +42,24 @@
      floor the native-window-button insets are measured against. */
   --chrome-pad: 12px;
 
-  /* Domain tokens: chrome stays monochrome; color lives in the graph.
-     Each colored token defends its exception. */
+  /* Domain tokens. Each colored token defends its exception. */
   /* Enabled state is the one thing worth a hue everywhere it appears
      (node dot, tile dot): green reads as "loaded" at a
      glance, and it's celery. */
   --on: oklch(0.66 0.15 155);
+
+  /* The three things the app finds and expects you to deal with. They
+     share badge slots — a row can carry two at once, and the status bar
+     carries all three — so each gets its own hue and keeps it
+     everywhere: a glance says WHICH finding without reading the word.
+     Spread far apart on the wheel, and clear of --on and --destructive,
+     which are the other two hues a row can show.
+     Amber for orphans alone: they are the only one with a destructive
+     action behind them. Blue for updates, the fetch-this hue. Violet
+     for unused, which is doing no harm and is only asleep. */
+  --orphan: oklch(0.66 0.16 65);
+  --update: oklch(0.57 0.16 250);
+  --unused: oklch(0.57 0.16 300);
   /* Hard dependency edges: deliberately faint. With collab mods
      declaring 50-100 deps each the edge mass must read as texture,
      with full contrast reserved for the selected neighborhood. */
@@ -58,9 +70,6 @@
   /* Edges touching the selected node: strong but not full-contrast;
      a 50-edge fan at foreground strength reads as a black smear. */
   --edge-active: oklch(0.5 0 0);
-  /* Orphan badge: amber = advisory, distinct from destructive (missing
-     dependency) which uses --destructive. */
-  --warn: oklch(0.68 0.16 65);
 
   /* Floating-panel elevation, shared by every floating surface so they
      all cast the same shadow. */
@@ -97,7 +106,11 @@
   --edge-hard: oklch(1 0 0 / 0.18);
   --edge-optional: oklch(1 0 0 / 0.09);
   --edge-active: oklch(0.75 0 0);
-  --warn: oklch(0.75 0.15 70);
+
+  /* Lifted for the dark canvas, same hues. */
+  --orphan: oklch(0.76 0.15 70);
+  --update: oklch(0.72 0.14 250);
+  --unused: oklch(0.76 0.14 302);
 }
 
 @theme inline {
@@ -121,7 +134,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-on: var(--on);
-  --color-warn: var(--warn);
+  --color-orphan: var(--orphan);
+  --color-update: var(--update);
+  --color-unused: var(--unused);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
