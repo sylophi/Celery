@@ -51,9 +51,9 @@ const SORT_STORAGE_KEY = "celery.sortMode";
 export function App() {
   const queryClient = useQueryClient();
   const configQuery = useConfig();
-  const modsQuery = useMods();
-  const index = useModIndex(modsQuery.data);
   const folder = configQuery.data?.modsFolder;
+  const modsQuery = useMods(folder);
+  const index = useModIndex(modsQuery.data);
   const folderStateQuery = useFolderState(folder);
   const folderState = folderStateQuery.data ?? EMPTY_FOLDER_STATE;
   const setEnabled = useSetEnabled();
@@ -352,7 +352,9 @@ export function App() {
             onRescan={() => {
               // Files may have changed under us, and update-badge state
               // depends on their hashes, so refresh both.
-              void queryClient.invalidateQueries({ queryKey: queryKeys.mods });
+              void queryClient.invalidateQueries({
+                queryKey: queryKeys.modsAll,
+              });
               void queryClient.invalidateQueries({
                 queryKey: queryKeys.remoteOverview,
               });
@@ -361,9 +363,7 @@ export function App() {
           />
           <main className="relative flex min-h-0 flex-1">
             <div className="relative min-w-0 flex-1">
-              {modsQuery.isLoading ? (
-                <ScanProgress />
-              ) : modsQuery.isError ? (
+              {modsQuery.isError ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
                   <p className="max-w-md text-xs text-destructive">
                     couldn't read the mods folder:{" "}
@@ -376,30 +376,31 @@ export function App() {
                     size="sm"
                     onClick={() =>
                       void queryClient.invalidateQueries({
-                        queryKey: queryKeys.mods,
+                        queryKey: queryKeys.modsAll,
                       })
                     }
                   >
                     try again
                   </Button>
                 </div>
+              ) : !index ? (
+                // No index means no snapshot for THIS folder yet: the
+                // first scan after onboarding, or one after a switch.
+                <ScanProgress />
+              ) : view === "graph" ? (
+                <GraphView
+                  index={index}
+                  scope={new Set(scope.map((f) => f.fileName))}
+                  visible={new Set(visible.map((f) => f.fileName))}
+                  idle={idle}
+                  dependencySet={dependencySet}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
+              ) : view === "grid" ? (
+                <GridView {...browseProps} index={index} />
               ) : (
-                index &&
-                (view === "graph" ? (
-                  <GraphView
-                    index={index}
-                    scope={new Set(scope.map((f) => f.fileName))}
-                    visible={new Set(visible.map((f) => f.fileName))}
-                    idle={idle}
-                    dependencySet={dependencySet}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                  />
-                ) : view === "grid" ? (
-                  <GridView {...browseProps} index={index} />
-                ) : (
-                  <ListView {...browseProps} index={index} />
-                ))
+                <ListView {...browseProps} index={index} />
               )}
               {view === "graph" && panel("floating")}
             </div>
@@ -414,8 +415,8 @@ export function App() {
           </main>
           <StatusBar
             folder={folder}
-            total={modsQuery.data?.files.length ?? 0}
-            enabled={modsQuery.data?.files.filter((f) => f.enabled).length ?? 0}
+            total={scope.length}
+            enabled={scope.filter((f) => f.enabled).length}
             updates={updates.size}
             unused={unusedRows.length}
             orphans={orphanFiles.length}
@@ -432,9 +433,12 @@ export function App() {
             style={dragRegion("drag")}
           />
           <Onboarding
-            // Invalidate everything: the mods query has already cached
-            // an empty snapshot from before a folder existed.
-            onPicked={() => void queryClient.invalidateQueries()}
+            // Only the config: reading the folder back is what enables
+            // the scan, and every other query is either keyed by that
+            // folder or waiting on it, so each starts empty by itself.
+            onPicked={() =>
+              void queryClient.invalidateQueries({ queryKey: queryKeys.config })
+            }
           />
         </div>
       )}

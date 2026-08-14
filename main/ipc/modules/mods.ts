@@ -17,14 +17,14 @@ async function requireFolder(): Promise<string> {
   return config.modsFolder;
 }
 
-async function scanOrEmpty() {
-  const config = await readGlobalConfig();
-  if (!config.modsFolder) return { folder: "", files: [] };
-  return scanModsFolder(config.modsFolder);
-}
-
 export const modsHandlers: Handlers<typeof modsContract, HandlerContext> = {
-  scan: () => scanOrEmpty(),
+  scan: async ({ folder }) => {
+    const configured = await requireFolder();
+    if (folder !== configured) {
+      throw new Error("Mods folder changed since this scan was asked for");
+    }
+    return scanModsFolder(configured);
+  },
 
   setEnabled: async ({ changes }) => {
     const folder = await requireFolder();
