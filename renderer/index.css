@@ -211,24 +211,6 @@
   --chrome-inset-end: calc(100% - env(titlebar-area-width, calc(100% - 140px)));
 }
 
-/* Status pill: visible, hold, then fade. Fully CSS-driven so the
-   component needs no timers or effect state. */
-@keyframes status-pill-fade {
-  0%,
-  75% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-.status-pill-fade {
-  animation: status-pill-fade 2.4s var(--ease-out-quart) forwards;
-}
-.status-pill-fade-slow {
-  animation: status-pill-fade 5s var(--ease-out-quart) forwards;
-}
-
 /* Shimmer bar for indeterminate progress (scan). */
 @keyframes loader-shimmer {
   0% {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   DownloadIcon,
   FolderIcon,
+  MoonIcon,
   PackageOpenIcon,
   StarIcon,
   TriangleAlertIcon,
@@ -13,7 +14,7 @@ import type {
   RemoteProgress,
   Section as ModSection,
 } from "@shared/schemas";
-import type { ModIndex } from "@shared/graph";
+import type { ModIndex, Orphan } from "@shared/graph";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -27,6 +28,7 @@ import {
   useUpdateMods,
 } from "@/hooks/useRemote";
 import { ModIconGlyph, TagIconGlyph, tagsBeyondCategory } from "@/lib/modIcons";
+import { ORPHAN_STYLE } from "@/lib/orphans";
 import { cn, displayName, formatBytes } from "@/lib/utils";
 
 // The panel sits over the graph (a canvas you pan anyway, and one the
@@ -62,7 +64,7 @@ export function DetailPanel({
 }: {
   file: ModFile;
   index: ModIndex;
-  orphan: boolean;
+  orphan: Orphan | undefined;
   dependencySet: Set<string>;
   folder: string;
   placement: PanelPlacement;
@@ -408,40 +410,63 @@ function ModFacts({
 }: {
   file: ModFile;
   category: string | undefined;
-  orphan: boolean;
+  orphan: Orphan | undefined;
 }) {
   const extraTags = tagsBeyondCategory(category, file.tags);
   if (category === undefined && extraTags.length === 0 && !orphan) {
     return null;
   }
   return (
-    <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px]">
-      {category !== undefined && (
-        <span className="inline-flex items-center gap-1 text-foreground/80">
-          <ModIconGlyph
-            category={category}
-            tags={file.tags}
-            className="size-3"
-          />
-          {category}
-        </span>
-      )}
-      {extraTags.map((tag) => (
-        <span
-          key={tag}
-          className="inline-flex items-center gap-1 text-muted-foreground"
-        >
-          <TagIconGlyph tag={tag} className="size-3" />
-          {tag}
-        </span>
-      ))}
+    <>
+      <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px]">
+        {category !== undefined && (
+          <span className="inline-flex items-center gap-1 text-foreground/80">
+            <ModIconGlyph
+              category={category}
+              tags={file.tags}
+              className="size-3"
+            />
+            {category}
+          </span>
+        )}
+        {extraTags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center gap-1 text-muted-foreground"
+          >
+            <TagIconGlyph tag={tag} className="size-3" />
+            {tag}
+          </span>
+        ))}
+        {orphan && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1",
+              ORPHAN_STYLE[orphan.kind].text,
+            )}
+          >
+            {/* A triangle would overstate the dormant case: that mod is
+                doing nothing wrong, it is only asleep. */}
+            {orphan.kind === "unused" ? (
+              <TriangleAlertIcon aria-hidden className="size-3" />
+            ) : (
+              <MoonIcon aria-hidden className="size-3" />
+            )}
+            {ORPHAN_STYLE[orphan.kind].label}
+          </span>
+        )}
+      </div>
+      {/* The panel is the one place with room to say what the word
+          means, and for a dormant mod what to do about it — the answer
+          is usually "nothing", which is worth saying outright. */}
       {orphan && (
-        <span className="inline-flex items-center gap-1 text-warn">
-          <TriangleAlertIcon aria-hidden className="size-3" />
-          orphan
-        </span>
+        <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+          {orphan.kind === "unused"
+            ? "Enabled, but nothing installed asks for it. Safe to disable or delete."
+            : `Enabled, but the ${orphan.wantedBy.length === 1 ? "mod" : `${orphan.wantedBy.length} mods`} that want it are disabled. Disabling it is free — re-enabling one of them brings it back.`}
+        </p>
       )}
-    </div>
+    </>
   );
 }
 

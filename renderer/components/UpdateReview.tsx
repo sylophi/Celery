@@ -38,7 +38,7 @@ export function UpdateDialog({
       open={open}
       title="updates"
       blurb="GameBanana has newer builds of these. Each zip is replaced under the same file name, so enabled state and favourites are kept."
-      items={outdated}
+      groups={[{ key: "outdated", items: outdated }]}
       keyOf={(row) => row.file.fileName}
       nameOf={(row) => displayName(row.file.fileName)}
       renderDetail={({ file, remote }) => {
@@ -56,7 +56,7 @@ export function UpdateDialog({
           </>
         );
       }}
-      summary={(chosen) =>
+      renderSummary={(chosen) =>
         `${chosen.length} selected, ${formatBytes(
           chosen.reduce((sum, row) => sum + row.remote.latestSizeBytes, 0),
         )} to download`

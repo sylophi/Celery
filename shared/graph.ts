@@ -184,24 +184,53 @@ export function planDisable(index: ModIndex, fileNames: string[]): DisablePlan {
   return { targets, brokenDependents, kept };
 }
 
+// Two ways a mod ends up enabled for nothing, and they want opposite
+// treatment, so the app names them apart everywhere it shows them:
+//
+//   unused  — nothing installed references it at all. Nothing is holding
+//             on to it, so trashing it costs nothing.
+//   dormant — installed mods do reference it, but every one of them is
+//             disabled. Disabling it is free (re-enabling one of those
+//             mods pulls it back through the hard-dep cascade), while
+//             trashing it means they come back with a missing
+//             dependency.
+export type OrphanKind = "unused" | "dormant";
+
+export type Orphan = {
+  fileName: string;
+  kind: OrphanKind;
+  // The installed-but-disabled mods referencing it; empty when unused.
+  // Hard and optional referrers together, matching how "something needs
+  // this" is decided below.
+  wantedBy: string[];
+};
+
 // ENABLED support-material files (helpers, asset packs, audio) that no
 // other enabled mod references: Everest loads them for nothing. This
 // is deliberately relative to the enabled set, not the installed set:
 // a disabled collab "using" a helper doesn't justify the helper being
 // loaded. Favorites are excluded: a starred mod is kept on purpose.
-export function findOrphans(index: ModIndex): string[] {
-  const result: string[] = [];
+export function findOrphans(index: ModIndex): Orphan[] {
+  const result: Orphan[] = [];
   for (const file of index.files) {
     if (!file.enabled || file.favorite) continue;
     const supportish = file.tags.every(
       (t) => t === "helper" || t === "asset-pack" || t === "audio",
     );
     if (!supportish || file.tags.length === 0) continue;
-    const used = [
+    const referrers = [
       ...(index.dependents.get(file.fileName) ?? []),
       ...(index.optionalDependents.get(file.fileName) ?? []),
-    ].some((dependent) => index.byFileName.get(dependent)?.enabled);
-    if (!used) result.push(file.fileName);
+    ];
+    if (referrers.some((r) => index.byFileName.get(r)?.enabled)) continue;
+    // Everything left is disabled, which is what makes this dormant
+    // rather than unused.
+    const wantedBy = referrers.toSorted();
+    result.push({
+      fileName: file.fileName,
+      kind: wantedBy.length > 0 ? "dormant" : "unused",
+      wantedBy,
+    });
   }
-  return result.toSorted();
+  return result.toSorted((a, b) => a.fileName.localeCompare(b.fileName));
 }

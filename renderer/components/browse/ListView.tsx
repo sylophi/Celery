@@ -1,7 +1,9 @@
 import { StarIcon } from "lucide-react";
+import type { OrphanKind } from "@shared/graph";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { useSetFavorite } from "@/hooks/useMods";
 import { ModIconGlyph } from "@/lib/modIcons";
+import { ORPHAN_STYLE } from "@/lib/orphans";
 import { cn, displayName, formatBytes } from "@/lib/utils";
 import { BrowseFrame, type BrowseProps } from "./BrowseFrame";
 
@@ -23,7 +25,7 @@ export function ListView(props: BrowseProps) {
           file={file}
           remote={remoteOf(file.fileName)}
           selected={file.fileName === selectedId}
-          orphan={orphans.has(file.fileName)}
+          orphan={orphans.get(file.fileName)?.kind}
           updateAvailable={updates.has(file.fileName)}
           missing={index.missing.get(file.fileName)?.length ?? 0}
           neededBy={index.dependents.get(file.fileName)?.size ?? 0}
@@ -47,7 +49,7 @@ function ModRow({
   file: ModFile;
   remote: RemoteFileStatus | undefined;
   selected: boolean;
-  orphan: boolean;
+  orphan: OrphanKind | undefined;
   updateAvailable: boolean;
   missing: number;
   neededBy: number;
@@ -110,12 +112,12 @@ function ModRow({
           no manifest
         </span>
       )}
-      {orphan && (
+      {orphan !== undefined && (
         <span
-          className="shrink-0 text-[10px] text-warn"
-          title="nothing enabled needs this"
+          className={cn("shrink-0 text-[10px]", ORPHAN_STYLE[orphan].text)}
+          title={ORPHAN_STYLE[orphan].hint}
         >
-          orphan
+          {ORPHAN_STYLE[orphan].label}
         </span>
       )}
       {updateAvailable && (
@@ -132,9 +134,10 @@ function ModRow({
       <span className="hidden w-28 shrink-0 truncate text-right text-[11px] text-muted-foreground/70 @3xl:block">
         {remote?.category ?? ""}
       </span>
-      {/* Counts every installed dependent, enabled or not — which is why
-          an orphan can still show one. Orphan means nothing ENABLED
-          needs it, so the tooltip has to say which count this is. */}
+      {/* Counts every installed dependent, enabled or not, so a dormant
+          orphan shows one: that gap between installed and enabled is
+          exactly what makes it dormant rather than unused. The tooltip
+          has to say which count this is. */}
       <span
         className="tabular hidden w-24 shrink-0 truncate text-right text-[11px] text-muted-foreground/70 @2xl:block"
         {...(neededBy > 0

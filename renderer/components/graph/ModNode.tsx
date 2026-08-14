@@ -1,11 +1,13 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { StarIcon } from "lucide-react";
+import type { OrphanKind } from "@shared/graph";
 import type { ModFile } from "@shared/schemas";
+import { ORPHAN_STYLE } from "@/lib/orphans";
 import { cn, displayName } from "@/lib/utils";
 
 export type ModNodeData = {
   file: ModFile;
-  orphan: boolean;
+  orphan: OrphanKind | undefined;
   missing: number;
   // True when something depends on this mod: dependencies render as
   // compact pills, distinct from the card shape of top-level mods.
@@ -79,11 +81,14 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
         {file.favorite && (
           <StarIcon className="size-2.5 shrink-0 fill-current text-muted-foreground" />
         )}
-        {data.orphan && (
+        {data.orphan !== undefined && (
           <span
             aria-hidden
-            title="nothing enabled needs this"
-            className="size-1 shrink-0 rounded-full bg-warn"
+            title={ORPHAN_STYLE[data.orphan].hint}
+            className={cn(
+              "size-1 shrink-0 rounded-full",
+              ORPHAN_STYLE[data.orphan].dot,
+            )}
           />
         )}
         {(data.missing > 0 || file.parseError !== undefined) && (
@@ -134,7 +139,14 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
       </div>
       <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
         <span className="tabular truncate">{version}</span>
-        {data.orphan && <span className="shrink-0 text-warn">orphan</span>}
+        {data.orphan !== undefined && (
+          <span
+            title={ORPHAN_STYLE[data.orphan].hint}
+            className={cn("shrink-0", ORPHAN_STYLE[data.orphan].text)}
+          >
+            {ORPHAN_STYLE[data.orphan].label}
+          </span>
+        )}
         {data.missing > 0 && (
           <span className="shrink-0 text-destructive">
             {data.missing} missing

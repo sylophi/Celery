@@ -1,10 +1,12 @@
 import { useRef, useState } from "react";
 import { StarIcon } from "lucide-react";
+import type { OrphanKind } from "@shared/graph";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { useSetFavorite } from "@/hooks/useMods";
 import { useOnScreen } from "@/hooks/useOnScreen";
 import { useRemoteModInfo } from "@/hooks/useRemote";
 import { ModIconGlyph } from "@/lib/modIcons";
+import { ORPHAN_STYLE } from "@/lib/orphans";
 import { cn, displayName } from "@/lib/utils";
 import {
   BrowseFrame,
@@ -31,7 +33,7 @@ export function GridView(props: BrowseProps) {
           file={file}
           remote={remoteOf(file.fileName)}
           selected={file.fileName === selectedId}
-          orphan={orphans.has(file.fileName)}
+          orphan={orphans.get(file.fileName)?.kind}
           updateAvailable={updates.has(file.fileName)}
           missing={index.missing.get(file.fileName)?.length ?? 0}
           onSelect={onSelect}
@@ -53,7 +55,7 @@ function ModCard({
   file: ModFile;
   remote: RemoteFileStatus | undefined;
   selected: boolean;
-  orphan: boolean;
+  orphan: OrphanKind | undefined;
   updateAvailable: boolean;
   missing: number;
   onSelect: (fileName: string) => void;
@@ -74,18 +76,28 @@ function ModCard({
   const art = source !== undefined && !broken ? source : null;
 
   // One badge, worst news first: a broken mod outranks a wasteful one,
-  // which outranks a merely out of date one.
+  // which outranks a merely out of date one. A dormant orphan sits below
+  // all of those — it is a note, and an update is the more useful thing
+  // to know about a mod that is otherwise fine.
   const badge =
     missing > 0 || file.parseError !== undefined
       ? {
           className: "bg-destructive",
           title: file.parseError ?? `${missing} missing dependencies`,
         }
-      : orphan
-        ? { className: "bg-warn", title: "nothing enabled needs this" }
+      : orphan === "unused"
+        ? {
+            className: ORPHAN_STYLE.unused.dot,
+            title: ORPHAN_STYLE.unused.hint,
+          }
         : updateAvailable
           ? { className: "bg-ring", title: "update available" }
-          : null;
+          : orphan === "dormant"
+            ? {
+                className: ORPHAN_STYLE.dormant.dot,
+                title: ORPHAN_STYLE.dormant.hint,
+              }
+            : null;
 
   return (
     // The star is a sibling of the card button, since a button inside a

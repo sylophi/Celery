@@ -17,13 +17,12 @@ import {
 } from "@/components/DetailPanel";
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
-import { OrphanDialog } from "@/components/OrphanCleanup";
+import { OrphanDialog, type OrphanRow } from "@/components/OrphanCleanup";
 import { UpdateDialog, type Outdated } from "@/components/UpdateReview";
 import { GridView } from "@/components/browse/GridView";
 import { ListView } from "@/components/browse/ListView";
 import { isSortMode, type SortMode } from "@/components/browse/sort";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { StatusPill, type Status } from "@/components/StatusPill";
 import { StatusBar, Toolbar, type View } from "@/components/Toolbar";
 import { EMPTY_FOLDER_STATE } from "@shared/schemas";
 import {
@@ -40,6 +39,7 @@ import {
   useUpdateMods,
 } from "@/hooks/useRemote";
 import { queryKeys } from "@/lib/queryKeys";
+import { notifyError, toast } from "@/lib/toast";
 import { displayName, dragRegion } from "@/lib/utils";
 
 const VIEW_STORAGE_KEY = "celery.view";
@@ -73,7 +73,6 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cleanupOpen, setCleanupOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
-  const [status, setStatus] = useState<Status | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const changeView = (next: View) => {
@@ -85,7 +84,14 @@ export function App() {
     localStorage.setItem(SORT_STORAGE_KEY, next);
   };
 
-  const orphans = index ? new Set(findOrphans(index)) : new Set<string>();
+  // Keyed rather than a flat list: every view asks "is THIS mod an
+  // orphan, and which kind", and the review wants the whole record.
+  const orphans = new Map(
+    (index ? findOrphans(index) : []).map((orphan) => [
+      orphan.fileName,
+      orphan,
+    ]),
+  );
   // How each zip maps onto GameBanana: its category, whether a newer
   // build exists, and the mod Name the artwork is fetched under.
   const remoteOf = (fileName: string) => overview.data?.byFile[fileName];
@@ -144,32 +150,22 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Every report has to bump the nonce: StatusPill keys its animation on
-  // it, so two identical messages in a row would otherwise not re-show.
-  const report = (text: string, kind: Status["kind"] = "ok") =>
-    setStatus((prev) => ({ text, kind, nonce: (prev?.nonce ?? 0) + 1 }));
-  const reportError = (prefix: string, error: unknown) =>
-    report(
-      `${prefix}: ${error instanceof Error ? error.message : String(error)}`,
-      "error",
-    );
-
   const apply = (
     changes: { fileName: string; enabled: boolean }[],
     message: string,
   ) => {
     setEnabled.mutate(changes, {
-      onSuccess: () => report(message),
+      onSuccess: () => toast.success(message),
       // A failed write (locked blacklist.txt, permissions) must be
       // visible, not a toggle that silently snaps back.
-      onError: (error) => reportError("couldn't write blacklist", error),
+      onError: (error) => notifyError("couldn't write blacklist", error),
     });
   };
 
   // Dependency-aware toggling. Enabling pulls in the disabled part of
   // the hard-dep closure; disabling takes down everything enabled that
-  // would break without it. Cascades apply immediately by default (the
-  // status pill reports what happened) unless the confirm-cascades
+  // would break without it. Cascades apply immediately by default (a
+  // toast reports what happened) unless the confirm-cascades
   // setting routes them through the preview dialog first.
   const requestToggle = (fileName: string, enable: boolean) => {
     if (!index) return;
@@ -248,23 +244,26 @@ export function App() {
     onSelect: setSelectedId,
   };
 
-  const orphanFiles = (index?.files ?? []).filter((f) =>
-    orphans.has(f.fileName),
-  );
+  const orphanRows: OrphanRow[] = (index?.files ?? []).flatMap((file) => {
+    const orphan = orphans.get(file.fileName);
+    return orphan ? [{ file, orphan }] : [];
+  });
   const runUpdate = (fileNames: string[]) => {
     updateMods.mutate(fileNames, {
       onSuccess: (result) => {
         // Only close once everything worked: a failed row has to stay
         // on screen with its reason attached.
-        if (result.failed.length === 0) setUpdatesOpen(false);
-        report(
-          result.failed.length > 0
-            ? `updated ${result.updated.length}, ${result.failed.length} failed`
-            : `updated ${result.updated.length} mods`,
-          result.failed.length > 0 ? "error" : "ok",
+        if (result.failed.length === 0) {
+          setUpdatesOpen(false);
+          toast.success(`updated ${result.updated.length} mods`);
+          return;
+        }
+        toast.error(
+          `updated ${result.updated.length}, ${result.failed.length} failed`,
+          { description: result.failed[0]?.error },
         );
       },
-      onError: (error) => reportError("couldn't update", error),
+      onError: (error) => notifyError("couldn't update", error),
     });
   };
 
@@ -281,14 +280,17 @@ export function App() {
       return;
     }
     removeMods.mutate(fileNames, {
-      onSuccess: (result) =>
-        report(
-          result.failed.length > 0
-            ? `trashed ${result.trashed.length}, couldn't remove ${result.failed.length}`
-            : `moved ${label} to the trash`,
-          result.failed.length > 0 ? "error" : "ok",
-        ),
-      onError: (error) => reportError("couldn't remove", error),
+      onSuccess: (result) => {
+        if (result.failed.length === 0) {
+          toast.success(`moved ${label} to the trash`);
+          return;
+        }
+        toast.error(
+          `trashed ${result.trashed.length}, couldn't remove ${result.failed.length}`,
+          { description: result.failed[0]?.error },
+        );
+      },
+      onError: (error) => notifyError("couldn't remove", error),
     });
   };
 
@@ -316,7 +318,7 @@ export function App() {
         <DetailPanel
           file={selectedFile}
           index={index}
-          orphan={orphans.has(selectedFile.fileName)}
+          orphan={orphans.get(selectedFile.fileName)}
           dependencySet={dependencySet}
           folder={folder ?? ""}
           placement={placement}
@@ -408,7 +410,10 @@ export function App() {
             total={modsQuery.data?.files.length ?? 0}
             enabled={modsQuery.data?.files.filter((f) => f.enabled).length ?? 0}
             updates={updates.size}
-            orphans={orphans.size}
+            unused={orphanRows.filter((r) => r.orphan.kind === "unused").length}
+            dormant={
+              orphanRows.filter((r) => r.orphan.kind === "dormant").length
+            }
             onReviewUpdates={() => setUpdatesOpen(true)}
             onReviewOrphans={() => setCleanupOpen(true)}
           />
@@ -448,7 +453,7 @@ export function App() {
       />
       <OrphanDialog
         open={cleanupOpen}
-        orphans={orphanFiles}
+        rows={orphanRows}
         busy={removeMods.isPending || setEnabled.isPending}
         onClose={() => setCleanupOpen(false)}
         onDisable={(fileNames) => cleanUp(fileNames, false)}
@@ -459,7 +464,6 @@ export function App() {
         onClose={() => setSettingsOpen(false)}
         folder={folder}
       />
-      <StatusPill status={status} />
     </div>
   );
 }
