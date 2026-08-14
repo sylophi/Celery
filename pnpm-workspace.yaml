@@ -1,0 +1,29 @@
+# Project-local pnpm settings, mirroring shigomori's hardening.
+#
+# nodeLinker: hoisted, required by electron-forge so it can crawl a
+# flat node_modules tree when packaging.
+nodeLinker: hoisted
+# Allowance for the @electron/node-gyp transitive dep
+# (git+https URL, pinned SHA) pulled in by @electron/rebuild.
+blockExoticSubdeps: false
+# Supply-chain hardening, pinned in-repo so it holds for every clone:
+# delay installs of newly published versions by 7 days (minutes), and
+# refuse updates whose trust signals weaken.
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+# electron-forge's legacy dep tree (semver@5/6, execa@1-era chains)
+# predates provenance attestation, and no-downgrade flags every such
+# version. Rather than enumerate them, skip downgrade checks for
+# versions already public for a year+: takeover risk concentrates in
+# fresh publishes, which stay fully checked (and delayed 7 days by
+# minimumReleaseAge above).
+trustPolicyIgnoreAfter: 525600
+# Per-package build-script trust (ignore-scripts stays on globally).
+allowBuilds:
+  electron: true
+  esbuild: true
+  lefthook: true
+# Transitive CVE floors inherited from shigomori (same forge toolchain).
+overrides:
+  "tar@<7.5.10": "^7.5.10"
+  "tmp@<0.2.7": "0.2.7"

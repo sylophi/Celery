@@ -1,0 +1,284 @@
+@import "@fontsource-variable/geist";
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@xyflow/react/dist/style.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Disabled controls keep pointer events so the not-allowed cursor and
+   title tooltips work (see the base-layer cursor rule below). In turn,
+   `hover:` must never style a disabled element, or dead controls light
+   up on hover; guarding it here covers every call site. */
+@custom-variant hover {
+  @media (hover: hover) {
+    &:hover:not(:disabled, [aria-disabled="true"], [data-disabled]) {
+      @slot;
+    }
+  }
+}
+
+:root {
+  --background: var(--color-white);
+  --foreground: var(--color-neutral-950);
+  --card: var(--color-white);
+  --card-foreground: var(--color-neutral-950);
+  --popover: var(--color-white);
+  --popover-foreground: var(--color-neutral-950);
+  --primary: var(--color-neutral-900);
+  --primary-foreground: var(--color-neutral-50);
+  --secondary: var(--color-neutral-100);
+  --secondary-foreground: var(--color-neutral-900);
+  --muted: var(--color-neutral-100);
+  --muted-foreground: var(--color-neutral-500);
+  --accent: var(--color-neutral-100);
+  --accent-foreground: var(--color-neutral-900);
+  --destructive: var(--color-rose-500);
+  --border: var(--color-neutral-200);
+  --input: var(--color-neutral-200);
+  --ring: var(--color-neutral-400);
+  --radius: 0.625rem;
+
+  /* Breathing room at the ends of the toolbar and status bar, and the
+     floor the native-window-button insets are measured against. */
+  --chrome-pad: 12px;
+
+  /* Domain tokens. Each colored token defends its exception. */
+  /* Enabled state is the one thing worth a hue everywhere it appears
+     (node dot, tile dot): green reads as "loaded" at a
+     glance, and it's celery. */
+  --on: oklch(0.66 0.15 155);
+
+  /* The three things the app finds and expects you to deal with. They
+     share badge slots. A row can carry two at once, and the status bar
+     carries all three, so each gets its own hue and keeps it
+     everywhere: a glance says WHICH finding without reading the word.
+     Spread far apart on the wheel, and clear of --on and --destructive,
+     which are the other two hues a row can show.
+     Amber for orphans alone: they are the only one with a destructive
+     action behind them. Blue for updates, the fetch-this hue. Violet
+     for unused, which is doing no harm and is only asleep. */
+  --orphan: oklch(0.66 0.16 65);
+  --update: oklch(0.57 0.16 250);
+  --unused: oklch(0.57 0.16 300);
+  /* Hard dependency edges: deliberately faint. With collab mods
+     declaring 50-100 deps each the edge mass must read as texture,
+     with full contrast reserved for the selected neighborhood. */
+  --edge-hard: oklch(0.85 0 0);
+  /* Optional dependency edges: one step weaker + dashed in the view;
+     hierarchy by weight, like songloupe's grid weak/mid/strong. */
+  --edge-optional: oklch(0.92 0 0);
+  /* Edges touching the selected node: strong but not full-contrast;
+     a 50-edge fan at foreground strength reads as a black smear. */
+  --edge-active: oklch(0.5 0 0);
+
+  /* Floating-panel elevation, shared by every floating surface so they
+     all cast the same shadow. */
+  --shadow-floating:
+    0 8px 24px -8px oklch(0 0 0 / 0.15), 0 2px 6px -2px oklch(0 0 0 / 0.08);
+}
+
+.dark {
+  /* Canvas lifted one step above pure-black neutral-950 so it reads
+     less heavy; card/popover sit a step above the canvas so floating
+     surfaces still elevate. */
+  --background: var(--color-neutral-900);
+  --foreground: var(--color-neutral-50);
+  --card: oklch(0.245 0 0);
+  --card-foreground: var(--color-neutral-50);
+  --popover: oklch(0.245 0 0);
+  --popover-foreground: var(--color-neutral-50);
+  --primary: var(--color-neutral-200);
+  --primary-foreground: var(--color-neutral-900);
+  --secondary: var(--color-neutral-800);
+  --secondary-foreground: var(--color-neutral-50);
+  --muted: var(--color-neutral-800);
+  --muted-foreground: var(--color-neutral-400);
+  --accent: var(--color-neutral-800);
+  --accent-foreground: var(--color-neutral-50);
+  --destructive: var(--color-rose-500);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: var(--color-neutral-500);
+
+  --on: oklch(0.72 0.15 155);
+  /* White-over-dark needs more alpha than black-over-light to read at
+     the same strength (songloupe's minimap lesson). */
+  --edge-hard: oklch(1 0 0 / 0.18);
+  --edge-optional: oklch(1 0 0 / 0.09);
+  --edge-active: oklch(0.75 0 0);
+
+  /* Lifted for the dark canvas, same hues. */
+  --orphan: oklch(0.76 0.15 70);
+  --update: oklch(0.72 0.14 250);
+  --unused: oklch(0.76 0.14 302);
+}
+
+@theme inline {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-on: var(--on);
+  --color-orphan: var(--orphan);
+  --color-update: var(--update);
+  --color-unused: var(--unused);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --shadow-floating: var(--shadow-floating);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    background: var(--background);
+  }
+  body {
+    @apply font-sans text-foreground antialiased;
+    font-feature-settings: "tnum" 1;
+    user-select: none;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Disabled controls show the not-allowed cursor; components must not
+     pair disabled state with pointer-events-none. */
+  :disabled,
+  [data-disabled],
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  /* Windows draws classic always-visible scrollbars; restyle them into
+     quiet overlay-style thumbs matching the theme. */
+  [data-platform="win32"] ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  [data-platform="win32"] ::-webkit-scrollbar-track,
+  [data-platform="win32"] ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  [data-platform="win32"] ::-webkit-scrollbar-thumb {
+    background: oklch(0.55 0 0 / 0.35);
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 5px;
+  }
+  [data-platform="win32"] ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.55 0 0 / 0.55);
+    background-clip: content-box;
+    border: 2px solid transparent;
+  }
+}
+
+/* The one rule that knows about native window buttons.
+   
+   Both platforms overlay theirs on the app's toolbar, just at opposite
+   ends: macOS traffic lights lead, Windows caption buttons trail. Each
+   side arrives as an inset custom property, and the bar pads by
+   whichever is larger — its own padding, or what the OS has claimed. So
+   there is one mechanism rather than one hack per platform, and a bar
+   that needs no per-platform markup.
+
+   `--chrome-inset-start` is published by the renderer's entry point from
+   the geometry main used to place the traffic lights. `--chrome-inset-end`
+   is the Window Controls Overlay's own measurement: it reports the
+   draggable strip it left us, so the room to keep clear is whatever it
+   did not — correct at any display scaling, where a fixed number is only
+   correct at 100%. The fallback resolves the same calc back to 140px.
+
+   Unlayered so it beats Tailwind's utilities; logical properties so a
+   mirrored UI would still put the padding on the right edge. */
+[data-titlebar] {
+  padding-inline-start: max(var(--chrome-inset-start, 0px), var(--chrome-pad));
+  padding-inline-end: max(var(--chrome-inset-end, 0px), var(--chrome-pad));
+}
+[data-platform="win32"] [data-titlebar] {
+  /* Percentage padding resolves against the containing block's width,
+     which for a full-width bar is the window — the same thing the
+     overlay measures against. */
+  --chrome-inset-end: calc(100% - env(titlebar-area-width, calc(100% - 140px)));
+}
+
+/* Shimmer bar for indeterminate progress (scan). */
+@keyframes loader-shimmer {
+  0% {
+    left: -33%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+.loader-shimmer {
+  animation: loader-shimmer 1.4s var(--ease-out-quart) infinite;
+}
+
+/* React Flow chrome, retinted to the token system. The graph pane is
+   the app's one colorful surface; its chrome still stays neutral. */
+.react-flow {
+  background: transparent;
+  --xy-attribution-background-color: transparent;
+}
+.react-flow__edge-path {
+  stroke: var(--edge-hard);
+  stroke-width: 1;
+}
+.react-flow__edge.edge-optional .react-flow__edge-path {
+  stroke: var(--edge-optional);
+  stroke-dasharray: 4 3;
+}
+.react-flow__edge.edge-missing .react-flow__edge-path {
+  /* Edge into a missing (ghost) dependency: dashed, quietly alarming. */
+  stroke: var(--destructive);
+  stroke-dasharray: 4 3;
+  opacity: 0.55;
+}
+.react-flow__edge.edge-active .react-flow__edge-path {
+  stroke: var(--edge-active);
+  stroke-width: 1.5;
+}
+.react-flow__handle {
+  /* Handles are layout anchors only, never interactive targets. */
+  opacity: 0;
+  pointer-events: none;
+}
+.react-flow__minimap {
+  @apply overflow-hidden rounded-lg border border-border;
+  background-color: var(--background);
+}
+.react-flow__minimap-mask {
+  fill: oklch(0 0 0 / 0.08);
+}
+.dark .react-flow__minimap-mask {
+  fill: oklch(1 0 0 / 0.14);
+}
+.react-flow__minimap-node {
+  fill: var(--muted-foreground);
+  opacity: 0.4;
+}

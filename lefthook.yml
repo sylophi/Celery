@@ -1,0 +1,11 @@
+# Pre-commit enforcement of the project's rules (typecheck, lint incl.
+# the React Compiler rules, formatting). Mirrors shigomori's setup.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: typecheck
+      run: pnpm typecheck
+    - name: lint
+      run: pnpm lint
+    - name: format
+      run: pnpm format:check
