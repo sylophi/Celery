@@ -130,20 +130,21 @@ export function StatusBar({
   enabled,
   updates,
   unused,
-  dormant,
+  orphans,
   onReviewUpdates,
+  onReviewUnused,
   onReviewOrphans,
 }: {
   folder: string;
   total: number;
   enabled: number;
   updates: number;
-  // The two kinds of orphan get their own chips rather than one summed
-  // count: they ask for different things, and a single "31 orphans"
-  // would read as 31 things safe to delete.
+  // Never summed into one count: these are separate problems with
+  // separate answers, and each chip opens the review that gives its own.
   unused: number;
-  dormant: number;
+  orphans: number;
   onReviewUpdates: () => void;
+  onReviewUnused: () => void;
   onReviewOrphans: () => void;
 }) {
   return (
@@ -159,24 +160,24 @@ export function StatusBar({
           onClick={onReviewUpdates}
           title="review the newer builds on GameBanana"
         >
-          {updates} updates
-        </CountChip>
-      )}
-      {dormant > 0 && (
-        <CountChip
-          onClick={onReviewOrphans}
-          title="loaded for nothing, but disabled mods still want them"
-        >
-          {dormant} dormant
+          {updates} {updates === 1 ? "update" : "updates"}
         </CountChip>
       )}
       {unused > 0 && (
+        <CountChip
+          onClick={onReviewUnused}
+          title="loaded for nothing, because the mods that want them are disabled"
+        >
+          {unused} unused
+        </CountChip>
+      )}
+      {orphans > 0 && (
         <CountChip
           tone="warn"
           onClick={onReviewOrphans}
           title="loaded for nothing, and nothing installed asks for them"
         >
-          {unused} unused
+          {orphans} {orphans === 1 ? "orphan" : "orphans"}
         </CountChip>
       )}
     </footer>

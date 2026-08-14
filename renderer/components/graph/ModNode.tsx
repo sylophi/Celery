@@ -1,13 +1,12 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { StarIcon } from "lucide-react";
-import type { OrphanKind } from "@shared/graph";
 import type { ModFile } from "@shared/schemas";
-import { ORPHAN_STYLE } from "@/lib/orphans";
+import { IDLE_STYLE, type IdleKind } from "@/lib/idle";
 import { cn, displayName } from "@/lib/utils";
 
 export type ModNodeData = {
   file: ModFile;
-  orphan: OrphanKind | undefined;
+  idle: IdleKind | undefined;
   missing: number;
   // True when something depends on this mod: dependencies render as
   // compact pills, distinct from the card shape of top-level mods.
@@ -81,13 +80,13 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
         {file.favorite && (
           <StarIcon className="size-2.5 shrink-0 fill-current text-muted-foreground" />
         )}
-        {data.orphan !== undefined && (
+        {data.idle !== undefined && (
           <span
             aria-hidden
-            title={ORPHAN_STYLE[data.orphan].hint}
+            title={IDLE_STYLE[data.idle].hint}
             className={cn(
               "size-1 shrink-0 rounded-full",
-              ORPHAN_STYLE[data.orphan].dot,
+              IDLE_STYLE[data.idle].dot,
             )}
           />
         )}
@@ -139,12 +138,12 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
       </div>
       <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
         <span className="tabular truncate">{version}</span>
-        {data.orphan !== undefined && (
+        {data.idle !== undefined && (
           <span
-            title={ORPHAN_STYLE[data.orphan].hint}
-            className={cn("shrink-0", ORPHAN_STYLE[data.orphan].text)}
+            title={IDLE_STYLE[data.idle].hint}
+            className={cn("shrink-0", IDLE_STYLE[data.idle].text)}
           >
-            {ORPHAN_STYLE[data.orphan].label}
+            {IDLE_STYLE[data.idle].label}
           </span>
         )}
         {data.missing > 0 && (

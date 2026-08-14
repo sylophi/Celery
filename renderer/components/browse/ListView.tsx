@@ -1,9 +1,8 @@
 import { StarIcon } from "lucide-react";
-import type { OrphanKind } from "@shared/graph";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { useSetFavorite } from "@/hooks/useMods";
 import { ModIconGlyph } from "@/lib/modIcons";
-import { ORPHAN_STYLE } from "@/lib/orphans";
+import { IDLE_STYLE, type IdleKind } from "@/lib/idle";
 import { cn, displayName, formatBytes } from "@/lib/utils";
 import { BrowseFrame, type BrowseProps } from "./BrowseFrame";
 
@@ -12,7 +11,7 @@ import { BrowseFrame, type BrowseProps } from "./BrowseFrame";
 // open each mod to compare: version, category, size, what needs it.
 
 export function ListView(props: BrowseProps) {
-  const { orphans, updates, index, remoteOf, selectedId, onSelect } = props;
+  const { idle, updates, index, remoteOf, selectedId, onSelect } = props;
   return (
     <BrowseFrame
       {...props}
@@ -25,7 +24,7 @@ export function ListView(props: BrowseProps) {
           file={file}
           remote={remoteOf(file.fileName)}
           selected={file.fileName === selectedId}
-          orphan={orphans.get(file.fileName)?.kind}
+          idle={idle.get(file.fileName)?.kind}
           updateAvailable={updates.has(file.fileName)}
           missing={index.missing.get(file.fileName)?.length ?? 0}
           neededBy={index.dependents.get(file.fileName)?.size ?? 0}
@@ -40,7 +39,7 @@ function ModRow({
   file,
   remote,
   selected,
-  orphan,
+  idle,
   updateAvailable,
   missing,
   neededBy,
@@ -49,7 +48,7 @@ function ModRow({
   file: ModFile;
   remote: RemoteFileStatus | undefined;
   selected: boolean;
-  orphan: OrphanKind | undefined;
+  idle: IdleKind | undefined;
   updateAvailable: boolean;
   missing: number;
   neededBy: number;
@@ -112,12 +111,12 @@ function ModRow({
           no manifest
         </span>
       )}
-      {orphan !== undefined && (
+      {idle !== undefined && (
         <span
-          className={cn("shrink-0 text-[10px]", ORPHAN_STYLE[orphan].text)}
-          title={ORPHAN_STYLE[orphan].hint}
+          className={cn("shrink-0 text-[10px]", IDLE_STYLE[idle].text)}
+          title={IDLE_STYLE[idle].hint}
         >
-          {ORPHAN_STYLE[orphan].label}
+          {IDLE_STYLE[idle].label}
         </span>
       )}
       {updateAvailable && (
@@ -134,10 +133,9 @@ function ModRow({
       <span className="hidden w-28 shrink-0 truncate text-right text-[11px] text-muted-foreground/70 @3xl:block">
         {remote?.category ?? ""}
       </span>
-      {/* Counts every installed dependent, enabled or not, so a dormant
-          orphan shows one: that gap between installed and enabled is
-          exactly what makes it dormant rather than unused. The tooltip
-          has to say which count this is. */}
+      {/* Counts every installed dependent, enabled or not, so an unused
+          mod shows one and an orphan never does — that is the whole
+          difference between them. The tooltip says which count it is. */}
       <span
         className="tabular hidden w-24 shrink-0 truncate text-right text-[11px] text-muted-foreground/70 @2xl:block"
         {...(neededBy > 0

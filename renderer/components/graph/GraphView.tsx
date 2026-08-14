@@ -10,7 +10,8 @@ import {
   useStore,
   type Edge,
 } from "@xyflow/react";
-import type { ModIndex, Orphan } from "@shared/graph";
+import type { ModIndex } from "@shared/graph";
+import type { IdleState } from "@/lib/idle";
 import { GhostNode, type GhostFlowNode } from "./GhostNode";
 import { ModNode, type ModFlowNode } from "./ModNode";
 import { RegionNode, type RegionFlowNode } from "./RegionNode";
@@ -57,7 +58,7 @@ export type GraphProps = {
   index: ModIndex;
   scope: Set<string>;
   visible: Set<string>;
-  orphans: Map<string, Orphan>;
+  idle: Map<string, IdleState>;
   dependencySet: Set<string>;
   selectedId: string | null;
   onSelect: (fileName: string | null) => void;
@@ -75,7 +76,7 @@ function GraphViewInner({
   index,
   scope,
   visible,
-  orphans,
+  idle,
   dependencySet,
   selectedId,
   onSelect,
@@ -155,7 +156,7 @@ function GraphViewInner({
         zIndex: 1,
         data: {
           file,
-          orphan: orphans.get(file.fileName)?.kind,
+          idle: idle.get(file.fileName)?.kind,
           missing: index.missing.get(file.fileName)?.length ?? 0,
           hasDependents: dependencySet.has(file.fileName),
           usedBy: usedBy.get(file.fileName),

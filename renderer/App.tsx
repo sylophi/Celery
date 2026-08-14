@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   dependentClosure,
   findOrphans,
+  findUnused,
   planDisable,
   planEnable,
 } from "@shared/graph";
@@ -17,7 +18,8 @@ import {
 } from "@/components/DetailPanel";
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
-import { OrphanDialog, type OrphanRow } from "@/components/OrphanCleanup";
+import { OrphanDialog } from "@/components/OrphanCleanup";
+import { UnusedDialog, type UnusedRow } from "@/components/UnusedReview";
 import { UpdateDialog, type Outdated } from "@/components/UpdateReview";
 import { GridView } from "@/components/browse/GridView";
 import { ListView } from "@/components/browse/ListView";
@@ -38,6 +40,7 @@ import {
   useRemoteProgress,
   useUpdateMods,
 } from "@/hooks/useRemote";
+import type { IdleState } from "@/lib/idle";
 import { queryKeys } from "@/lib/queryKeys";
 import { notifyError, toast } from "@/lib/toast";
 import { displayName, dragRegion } from "@/lib/utils";
@@ -71,7 +74,8 @@ export function App() {
   });
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [orphansOpen, setOrphansOpen] = useState(false);
+  const [unusedOpen, setUnusedOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -84,14 +88,16 @@ export function App() {
     localStorage.setItem(SORT_STORAGE_KEY, next);
   };
 
-  // Keyed rather than a flat list: every view asks "is THIS mod an
-  // orphan, and which kind", and the review wants the whole record.
-  const orphans = new Map(
-    (index ? findOrphans(index) : []).map((orphan) => [
-      orphan.fileName,
-      orphan,
-    ]),
-  );
+  // Two separate problems, found separately. The views only ever draw
+  // one badge per mod, so they get the two folded into a single lookup;
+  // the reviews get their own list, since each does its own thing.
+  const orphanNames = index ? findOrphans(index) : [];
+  const unusedList = index ? findUnused(index) : [];
+  const idle = new Map<string, IdleState>();
+  for (const fileName of orphanNames) idle.set(fileName, { kind: "orphan" });
+  for (const row of unusedList) {
+    idle.set(row.fileName, { kind: "unused", wantedBy: row.wantedBy });
+  }
   // How each zip maps onto GameBanana: its category, whether a newer
   // build exists, and the mod Name the artwork is fetched under.
   const remoteOf = (fileName: string) => overview.data?.byFile[fileName];
@@ -236,7 +242,7 @@ export function App() {
     query,
     sort,
     onSort: changeSort,
-    orphans,
+    idle,
     updates,
     dependencySet,
     remoteOf,
@@ -244,9 +250,12 @@ export function App() {
     onSelect: setSelectedId,
   };
 
-  const orphanRows: OrphanRow[] = (index?.files ?? []).flatMap((file) => {
-    const orphan = orphans.get(file.fileName);
-    return orphan ? [{ file, orphan }] : [];
+  // Both reviews list files, not names; the finders deal in names.
+  const fileOf = (fileName: string) => index?.byFileName.get(fileName);
+  const orphanFiles = orphanNames.flatMap((f) => fileOf(f) ?? []);
+  const unusedRows: UnusedRow[] = unusedList.flatMap((row) => {
+    const file = fileOf(row.fileName);
+    return file ? [{ file, wantedBy: row.wantedBy }] : [];
   });
   const runUpdate = (fileNames: string[]) => {
     updateMods.mutate(fileNames, {
@@ -267,18 +276,21 @@ export function App() {
     });
   };
 
+  // The unused review's one action. Straight through `apply`, since
+  // this is the same write as toggling a mod off by hand.
+  const disableUnused = (fileNames: string[]) => {
+    setUnusedOpen(false);
+    apply(
+      fileNames.map((fileName) => ({ fileName, enabled: false })),
+      `disabled ${fileNames.length} unused mods`,
+    );
+  };
+
   // Trashing is reported rather than announced: a partial failure has to
   // be visible, not swallowed.
-  const cleanUp = (fileNames: string[], trash: boolean) => {
-    setCleanupOpen(false);
+  const trashOrphans = (fileNames: string[]) => {
+    setOrphansOpen(false);
     const label = `${fileNames.length} ${fileNames.length === 1 ? "orphan" : "orphans"}`;
-    if (!trash) {
-      apply(
-        fileNames.map((fileName) => ({ fileName, enabled: false })),
-        `disabled ${label}`,
-      );
-      return;
-    }
     removeMods.mutate(fileNames, {
       onSuccess: (result) => {
         if (result.failed.length === 0) {
@@ -318,7 +330,7 @@ export function App() {
         <DetailPanel
           file={selectedFile}
           index={index}
-          orphan={orphans.get(selectedFile.fileName)}
+          idle={idle.get(selectedFile.fileName)}
           dependencySet={dependencySet}
           folder={folder ?? ""}
           placement={placement}
@@ -383,7 +395,7 @@ export function App() {
                     index={index}
                     scope={new Set(scope.map((f) => f.fileName))}
                     visible={new Set(visible.map((f) => f.fileName))}
-                    orphans={orphans}
+                    idle={idle}
                     dependencySet={dependencySet}
                     selectedId={selectedId}
                     onSelect={setSelectedId}
@@ -410,12 +422,11 @@ export function App() {
             total={modsQuery.data?.files.length ?? 0}
             enabled={modsQuery.data?.files.filter((f) => f.enabled).length ?? 0}
             updates={updates.size}
-            unused={orphanRows.filter((r) => r.orphan.kind === "unused").length}
-            dormant={
-              orphanRows.filter((r) => r.orphan.kind === "dormant").length
-            }
+            unused={unusedRows.length}
+            orphans={orphanFiles.length}
             onReviewUpdates={() => setUpdatesOpen(true)}
-            onReviewOrphans={() => setCleanupOpen(true)}
+            onReviewUnused={() => setUnusedOpen(true)}
+            onReviewOrphans={() => setOrphansOpen(true)}
           />
         </>
       ) : (
@@ -451,13 +462,19 @@ export function App() {
         onClose={() => setUpdatesOpen(false)}
         onUpdate={runUpdate}
       />
+      <UnusedDialog
+        open={unusedOpen}
+        unused={unusedRows}
+        busy={setEnabled.isPending}
+        onClose={() => setUnusedOpen(false)}
+        onDisable={disableUnused}
+      />
       <OrphanDialog
-        open={cleanupOpen}
-        rows={orphanRows}
-        busy={removeMods.isPending || setEnabled.isPending}
-        onClose={() => setCleanupOpen(false)}
-        onDisable={(fileNames) => cleanUp(fileNames, false)}
-        onTrash={(fileNames) => cleanUp(fileNames, true)}
+        open={orphansOpen}
+        orphans={orphanFiles}
+        busy={removeMods.isPending}
+        onClose={() => setOrphansOpen(false)}
+        onTrash={trashOrphans}
       />
       <SettingsDialog
         open={settingsOpen}

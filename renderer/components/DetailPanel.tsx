@@ -14,7 +14,7 @@ import type {
   RemoteProgress,
   Section as ModSection,
 } from "@shared/schemas";
-import type { ModIndex, Orphan } from "@shared/graph";
+import type { ModIndex } from "@shared/graph";
 import { Button } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -28,7 +28,7 @@ import {
   useUpdateMods,
 } from "@/hooks/useRemote";
 import { ModIconGlyph, TagIconGlyph, tagsBeyondCategory } from "@/lib/modIcons";
-import { ORPHAN_STYLE } from "@/lib/orphans";
+import { IDLE_STYLE, type IdleState } from "@/lib/idle";
 import { cn, displayName, formatBytes } from "@/lib/utils";
 
 // The panel sits over the graph (a canvas you pan anyway, and one the
@@ -54,7 +54,7 @@ function formatCount(n: number): string {
 export function DetailPanel({
   file,
   index,
-  orphan,
+  idle,
   dependencySet,
   folder,
   placement,
@@ -64,7 +64,7 @@ export function DetailPanel({
 }: {
   file: ModFile;
   index: ModIndex;
-  orphan: Orphan | undefined;
+  idle: IdleState | undefined;
   dependencySet: Set<string>;
   folder: string;
   placement: PanelPlacement;
@@ -140,11 +140,7 @@ export function DetailPanel({
             <XIcon />
           </Button>
         </div>
-        <ModFacts
-          file={file}
-          category={remoteStatus?.category}
-          orphan={orphan}
-        />
+        <ModFacts file={file} category={remoteStatus?.category} idle={idle} />
         <div className="mt-2.5 flex items-center gap-1.5">
           <Button
             size="sm"
@@ -406,14 +402,14 @@ export function GhostPanel({
 function ModFacts({
   file,
   category,
-  orphan,
+  idle,
 }: {
   file: ModFile;
   category: string | undefined;
-  orphan: Orphan | undefined;
+  idle: IdleState | undefined;
 }) {
   const extraTags = tagsBeyondCategory(category, file.tags);
-  if (category === undefined && extraTags.length === 0 && !orphan) {
+  if (category === undefined && extraTags.length === 0 && !idle) {
     return null;
   }
   return (
@@ -438,32 +434,32 @@ function ModFacts({
             {tag}
           </span>
         ))}
-        {orphan && (
+        {idle && (
           <span
             className={cn(
               "inline-flex items-center gap-1",
-              ORPHAN_STYLE[orphan.kind].text,
+              IDLE_STYLE[idle.kind].text,
             )}
           >
-            {/* A triangle would overstate the dormant case: that mod is
+            {/* A triangle would overstate the unused case: that mod is
                 doing nothing wrong, it is only asleep. */}
-            {orphan.kind === "unused" ? (
+            {idle.kind === "orphan" ? (
               <TriangleAlertIcon aria-hidden className="size-3" />
             ) : (
               <MoonIcon aria-hidden className="size-3" />
             )}
-            {ORPHAN_STYLE[orphan.kind].label}
+            {IDLE_STYLE[idle.kind].label}
           </span>
         )}
       </div>
-      {/* The panel is the one place with room to say what the word
-          means, and for a dormant mod what to do about it — the answer
-          is usually "nothing", which is worth saying outright. */}
-      {orphan && (
+      {/* The panel is the one place with room to say what the word means
+          and what follows from it — which for an unused mod is usually
+          "nothing", worth saying outright. */}
+      {idle && (
         <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
-          {orphan.kind === "unused"
-            ? "Enabled, but nothing installed asks for it. Safe to disable or delete."
-            : `Enabled, but the ${orphan.wantedBy.length === 1 ? "mod" : `${orphan.wantedBy.length} mods`} that want it are disabled. Disabling it is free — re-enabling one of them brings it back.`}
+          {idle.kind === "orphan"
+            ? "Enabled, and no installed mod asks for it. Nothing is coming back for it, so it is safe to delete."
+            : `Enabled, but the ${idle.wantedBy.length === 1 ? "mod" : `${idle.wantedBy.length} mods`} that want it are disabled. Turning it off is free — re-enabling one of them brings it back.`}
         </p>
       )}
     </>

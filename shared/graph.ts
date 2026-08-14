@@ -184,34 +184,20 @@ export function planDisable(index: ModIndex, fileNames: string[]): DisablePlan {
   return { targets, brokenDependents, kept };
 }
 
-// Two ways a mod ends up enabled for nothing, and they want opposite
-// treatment, so the app names them apart everywhere it shows them:
-//
-//   unused  — nothing installed references it at all. Nothing is holding
-//             on to it, so trashing it costs nothing.
-//   dormant — installed mods do reference it, but every one of them is
-//             disabled. Disabling it is free (re-enabling one of those
-//             mods pulls it back through the hard-dep cascade), while
-//             trashing it means they come back with a missing
-//             dependency.
-export type OrphanKind = "unused" | "dormant";
-
-export type Orphan = {
-  fileName: string;
-  kind: OrphanKind;
-  // The installed-but-disabled mods referencing it; empty when unused.
-  // Hard and optional referrers together, matching how "something needs
-  // this" is decided below.
-  wantedBy: string[];
-};
-
 // ENABLED support-material files (helpers, asset packs, audio) that no
-// other enabled mod references: Everest loads them for nothing. This
-// is deliberately relative to the enabled set, not the installed set:
-// a disabled collab "using" a helper doesn't justify the helper being
-// loaded. Favorites are excluded: a starred mod is kept on purpose.
-export function findOrphans(index: ModIndex): Orphan[] {
-  const result: Orphan[] = [];
+// other ENABLED mod references, paired with every installed mod that
+// does reference them. Deliberately relative to the enabled set rather
+// than the installed set: a disabled collab "using" a helper doesn't
+// justify Everest loading that helper. Favorites are skipped, since a
+// starred mod is kept on purpose. Hard and optional referrers count the
+// same — either is a mod that asked for this.
+//
+// Both problems below are read off this one pass, and the difference
+// between them is only whether the pairing came back empty.
+function idleSupportMods(
+  index: ModIndex,
+): { file: string; wantedBy: string[] }[] {
+  const result: { file: string; wantedBy: string[] }[] = [];
   for (const file of index.files) {
     if (!file.enabled || file.favorite) continue;
     const supportish = file.tags.every(
@@ -223,14 +209,33 @@ export function findOrphans(index: ModIndex): Orphan[] {
       ...(index.optionalDependents.get(file.fileName) ?? []),
     ];
     if (referrers.some((r) => index.byFileName.get(r)?.enabled)) continue;
-    // Everything left is disabled, which is what makes this dormant
-    // rather than unused.
-    const wantedBy = referrers.toSorted();
-    result.push({
-      fileName: file.fileName,
-      kind: wantedBy.length > 0 ? "dormant" : "unused",
-      wantedBy,
-    });
+    result.push({ file: file.fileName, wantedBy: referrers.toSorted() });
   }
-  return result.toSorted((a, b) => a.fileName.localeCompare(b.fileName));
+  return result.toSorted((a, b) => a.file.localeCompare(b.file));
+}
+
+// Orphans: nothing in the folder lists them as a dependency — not an
+// enabled mod, not a disabled one. Nothing is coming back for them, so
+// the answer is to delete them.
+export function findOrphans(index: ModIndex): string[] {
+  return idleSupportMods(index)
+    .filter((entry) => entry.wantedBy.length === 0)
+    .map((entry) => entry.file);
+}
+
+export type Unused = {
+  fileName: string;
+  // The installed mods that want it, all of them currently disabled.
+  wantedBy: string[];
+};
+
+// Unused: mods DO ask for these, but every one of those mods is
+// disabled, so Everest is loading them for nobody. Deleting one would
+// break its dependents the moment they came back; disabling costs
+// nothing, because re-enabling any of them pulls this in again through
+// the hard-dep cascade. So the answer is to stop loading them.
+export function findUnused(index: ModIndex): Unused[] {
+  return idleSupportMods(index)
+    .filter((entry) => entry.wantedBy.length > 0)
+    .map((entry) => ({ fileName: entry.file, wantedBy: entry.wantedBy }));
 }

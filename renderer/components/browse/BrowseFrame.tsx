@@ -5,7 +5,8 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import type { ModIndex, Orphan } from "@shared/graph";
+import type { ModIndex } from "@shared/graph";
+import type { IdleState } from "@/lib/idle";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { BrowseHeader } from "./BrowseHeader";
 import { BrowseSection } from "./Section";
@@ -24,9 +25,9 @@ export type BrowseProps = {
   query: string;
   sort: SortMode;
   onSort: (sort: SortMode) => void;
-  // Keyed by file name, absent when the mod is not an orphan; the value
-  // carries which kind, which is what the views actually draw.
-  orphans: Map<string, Orphan>;
+  // Keyed by file name, absent when the mod is neither. The views draw
+  // one badge slot, so the two problems arrive folded together here.
+  idle: Map<string, IdleState>;
   updates: Set<string>;
   index: ModIndex;
   dependencySet: Set<string>;

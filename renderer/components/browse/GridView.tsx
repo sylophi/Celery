@@ -1,12 +1,11 @@
 import { useRef, useState } from "react";
 import { StarIcon } from "lucide-react";
-import type { OrphanKind } from "@shared/graph";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { useSetFavorite } from "@/hooks/useMods";
 import { useOnScreen } from "@/hooks/useOnScreen";
 import { useRemoteModInfo } from "@/hooks/useRemote";
 import { ModIconGlyph } from "@/lib/modIcons";
-import { ORPHAN_STYLE } from "@/lib/orphans";
+import { IDLE_STYLE, type IdleKind } from "@/lib/idle";
 import { cn, displayName } from "@/lib/utils";
 import {
   BrowseFrame,
@@ -20,7 +19,7 @@ import {
 // the whole tile for the many helpers that have no art to show.
 
 export function GridView(props: BrowseProps) {
-  const { orphans, updates, index, remoteOf, selectedId, onSelect } = props;
+  const { idle, updates, index, remoteOf, selectedId, onSelect } = props;
   return (
     <BrowseFrame
       {...props}
@@ -33,7 +32,7 @@ export function GridView(props: BrowseProps) {
           file={file}
           remote={remoteOf(file.fileName)}
           selected={file.fileName === selectedId}
-          orphan={orphans.get(file.fileName)?.kind}
+          idle={idle.get(file.fileName)?.kind}
           updateAvailable={updates.has(file.fileName)}
           missing={index.missing.get(file.fileName)?.length ?? 0}
           onSelect={onSelect}
@@ -47,7 +46,7 @@ function ModCard({
   file,
   remote,
   selected,
-  orphan,
+  idle,
   updateAvailable,
   missing,
   onSelect,
@@ -55,7 +54,7 @@ function ModCard({
   file: ModFile;
   remote: RemoteFileStatus | undefined;
   selected: boolean;
-  orphan: OrphanKind | undefined;
+  idle: IdleKind | undefined;
   updateAvailable: boolean;
   missing: number;
   onSelect: (fileName: string) => void;
@@ -76,7 +75,7 @@ function ModCard({
   const art = source !== undefined && !broken ? source : null;
 
   // One badge, worst news first: a broken mod outranks a wasteful one,
-  // which outranks a merely out of date one. A dormant orphan sits below
+  // which outranks a merely out of date one. An unused mod sits below
   // all of those — it is a note, and an update is the more useful thing
   // to know about a mod that is otherwise fine.
   const badge =
@@ -85,17 +84,14 @@ function ModCard({
           className: "bg-destructive",
           title: file.parseError ?? `${missing} missing dependencies`,
         }
-      : orphan === "unused"
-        ? {
-            className: ORPHAN_STYLE.unused.dot,
-            title: ORPHAN_STYLE.unused.hint,
-          }
+      : idle === "orphan"
+        ? { className: IDLE_STYLE.orphan.dot, title: IDLE_STYLE.orphan.hint }
         : updateAvailable
           ? { className: "bg-ring", title: "update available" }
-          : orphan === "dormant"
+          : idle === "unused"
             ? {
-                className: ORPHAN_STYLE.dormant.dot,
-                title: ORPHAN_STYLE.dormant.hint,
+                className: IDLE_STYLE.unused.dot,
+                title: IDLE_STYLE.unused.hint,
               }
             : null;
 
