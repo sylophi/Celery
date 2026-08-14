@@ -133,9 +133,10 @@ function ModRow({
       <span className="hidden w-28 shrink-0 truncate text-right text-[11px] text-muted-foreground/70 @3xl:block">
         {remote?.category ?? ""}
       </span>
-      {/* Counts every installed dependent, enabled or not, so an unused
-          mod shows one and an orphan never does — that is the whole
-          difference between them. The tooltip says which count it is. */}
+      {/* Hard dependents only, enabled or not. An orphan therefore
+          never shows one and an unused mod usually does — usually,
+          because a mod wanted only as an OPTIONAL dependency still
+          counts as unused while leaving this column blank. */}
       <span
         className="tabular hidden w-24 shrink-0 truncate text-right text-[11px] text-muted-foreground/70 @2xl:block"
         {...(neededBy > 0

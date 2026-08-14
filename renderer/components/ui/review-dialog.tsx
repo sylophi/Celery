@@ -51,13 +51,18 @@ export function ReviewDialog<T>({
   const [excluded, setExcluded] = useState<Set<string>>(() => new Set());
   const chosen = items.filter((item) => !excluded.has(keyOf(item)));
 
-  const close = () => {
-    setExcluded(new Set());
-    onClose();
-  };
+  // Cleared on open rather than on close: an action closes the dialog
+  // through the caller's own state, so resetting on the way out catches
+  // no path but Cancel, and the next visit opens with stale ticks and a
+  // dead button.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setExcluded(new Set());
+  }
 
   return (
-    <Dialog open={open} onClose={close} title={title} className="max-w-lg">
+    <Dialog open={open} onClose={onClose} title={title} className="max-w-lg">
       <div className="flex flex-col gap-3">
         <p className="text-xs leading-relaxed text-muted-foreground">{blurb}</p>
 
@@ -101,7 +106,7 @@ export function ReviewDialog<T>({
           <span className="tabular min-w-0 flex-1 truncate text-[11px] text-muted-foreground">
             {summary(chosen)}
           </span>
-          <Button variant="ghost" size="sm" disabled={busy} onClick={close}>
+          <Button variant="ghost" size="sm" disabled={busy} onClick={onClose}>
             cancel
           </Button>
           {actions.map((action) => (

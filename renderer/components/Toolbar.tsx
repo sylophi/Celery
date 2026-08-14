@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FINDING, type Finding } from "@/lib/findings";
-import { cn, dragRegion } from "@/lib/utils";
+import { cn, dragRegion, plural } from "@/lib/utils";
 
 // The app's chrome: which view you are in and the two global actions on
 // top, what is being counted along the bottom. The top bar stands in for
@@ -162,7 +162,7 @@ export function StatusBar({
           onClick={onReviewUpdates}
           title="review the newer builds on GameBanana"
         >
-          {updates} {updates === 1 ? "update" : "updates"}
+          {plural(updates, "update")}
         </CountChip>
       )}
       {unused > 0 && (
@@ -180,7 +180,7 @@ export function StatusBar({
           onClick={onReviewOrphans}
           title="loaded for nothing, and nothing installed asks for them"
         >
-          {orphans} {orphans === 1 ? "orphan" : "orphans"}
+          {plural(orphans, "orphan")}
         </CountChip>
       )}
     </footer>

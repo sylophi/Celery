@@ -43,7 +43,7 @@ import {
 import type { IdleState } from "@/lib/findings";
 import { queryKeys } from "@/lib/queryKeys";
 import { notifyError, toast } from "@/lib/toast";
-import { displayName, dragRegion } from "@/lib/utils";
+import { displayName, dragRegion, plural } from "@/lib/utils";
 
 const VIEW_STORAGE_KEY = "celery.view";
 const SORT_STORAGE_KEY = "celery.sortMode";
@@ -257,7 +257,7 @@ export function App() {
         // on screen with its reason attached.
         if (result.failed.length === 0) {
           setUpdatesOpen(false);
-          toast.success(`updated ${result.updated.length} mods`);
+          toast.success(`updated ${plural(result.updated.length, "mod")}`);
           return;
         }
         // Through notifyError, not toast.error: a batch where every
@@ -277,7 +277,7 @@ export function App() {
     setUnusedOpen(false);
     apply(
       fileNames.map((fileName) => ({ fileName, enabled: false })),
-      `disabled ${fileNames.length} unused mods`,
+      `disabled ${plural(fileNames.length, "unused mod")}`,
     );
   };
 
@@ -285,7 +285,7 @@ export function App() {
   // be visible, not swallowed.
   const trashOrphans = (fileNames: string[]) => {
     setOrphansOpen(false);
-    const label = `${fileNames.length} ${fileNames.length === 1 ? "orphan" : "orphans"}`;
+    const label = plural(fileNames.length, "orphan");
     removeMods.mutate(fileNames, {
       onSuccess: (result) => {
         if (result.failed.length === 0) {

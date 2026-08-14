@@ -28,3 +28,9 @@ export function formatBytes(bytes: number): string {
   }
   return `${value >= 100 ? Math.round(value) : value.toFixed(1)} ${unit}`;
 }
+
+// "1 mod" / "3 mods". Every count the app shows the user goes through
+// here, so none of them can drift back into "1 mods".
+export function plural(count: number, one: string, many = `${one}s`): string {
+  return `${count} ${count === 1 ? one : many}`;
+}

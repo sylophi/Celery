@@ -456,7 +456,7 @@ function ModFacts({
         <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
           {idle.kind === "orphan"
             ? "Enabled, and no installed mod asks for it. Nothing is coming back for it, so it is safe to delete."
-            : `Enabled, but the ${idle.wantedBy.length === 1 ? "mod" : `${idle.wantedBy.length} mods`} that want it are disabled. Turning it off is free — re-enabling one of them brings it back.`}
+            : `Enabled, but the ${idle.wantedBy.length === 1 ? "one mod that wants it is" : `${idle.wantedBy.length} mods that want it are`} disabled. Turning it off is free — re-enabling one of them brings it back.`}
         </p>
       )}
     </>

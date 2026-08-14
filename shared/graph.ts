@@ -75,6 +75,11 @@ export function buildIndex(snapshot: ModsSnapshot): ModIndex {
         }
       }
     }
+    // A multi-entry manifest can list the same provider optionally in
+    // one entry and hard in a later one; the per-entry guard above only
+    // sees what `hard` held at the time. Hard wins, or the file lands in
+    // both reverse maps and gets counted twice as a dependent.
+    for (const provider of hard) optional.delete(provider);
     hardDeps.set(file.fileName, hard);
     optionalDeps.set(file.fileName, optional);
     if (missingNames.length > 0) missing.set(file.fileName, missingNames);
@@ -192,8 +197,10 @@ export function planDisable(index: ModIndex, fileNames: string[]): DisablePlan {
 // starred mod is kept on purpose. Hard and optional referrers count the
 // same — either is a mod that asked for this.
 //
-// Both problems below are read off this one pass, and the difference
-// between them is only whether the pairing came back empty.
+// Both findings below are this same pass, differing only in whether the
+// pairing came back empty. They stay separate exports because they are
+// separate problems with opposite answers; the repeated walk costs
+// ~0.1ms over a 150-mod folder, a few times per session.
 // Both finders hand back the files themselves, not their names: every
 // caller wants a size or a label off them, and the index they came from
 // is right here.
@@ -223,6 +230,14 @@ function idleSupportMods(index: ModIndex): IdleSupportMod[] {
 // enabled mod, not a disabled one. Nothing is coming back for them, so
 // the answer is to delete them.
 export function findOrphans(index: ModIndex): ModFile[] {
+  // A file whose manifest could not be read — a zip locked mid-scan, a
+  // malformed archive — declares no dependencies, so everything it
+  // actually needs looks unwanted. "Nothing in the folder asks for
+  // this" is a claim that needs a complete graph, and the only action
+  // offered for an orphan deletes it, so while any manifest is
+  // unreadable nothing is reported as one. `findUnused` is left alone:
+  // disabling is reversible whichever way the graph is wrong.
+  if (index.files.some((f) => f.parseError !== undefined)) return [];
   return idleSupportMods(index)
     .filter((entry) => entry.wantedBy.length === 0)
     .map((entry) => entry.file);
