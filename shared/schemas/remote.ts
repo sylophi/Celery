@@ -73,10 +73,12 @@ export const InstallResultSchema = z.object({
 });
 export type InstallResult = z.infer<typeof InstallResultSchema>;
 
-// Outcome of a batch update. Same shape as a batch trash: partial
-// failure is normal (a mid-download drop, or Windows refusing to
-// replace a zip the running game holds open), so it is reported per
-// file instead of failing everything.
+// Outcome of a batch update. Same shape as a batch trash: a sweep of
+// downloads has plenty of ways to lose one of its files (a dropped
+// connection, a mirror 404, a full disk), so failures are reported per
+// file instead of taking the whole batch down. Everest reads mods into
+// memory at launch and does not hold the zips, so the game being open
+// is not one of those ways.
 export const UpdateResultSchema = z.object({
   updated: z.array(z.string()),
   failed: z.array(z.object({ fileName: z.string(), error: z.string() })),

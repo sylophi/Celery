@@ -277,8 +277,8 @@ export function App() {
     });
   };
 
-  // Trashing is reported rather than announced: a partial failure (the
-  // game holding a zip open) has to be visible, not swallowed.
+  // Trashing is reported rather than announced: a partial failure has to
+  // be visible, not swallowed.
   const cleanUp = (fileNames: string[], trash: boolean) => {
     setCleanupOpen(false);
     const label = `${fileNames.length} ${fileNames.length === 1 ? "orphan" : "orphans"}`;
