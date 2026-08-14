@@ -49,8 +49,8 @@
   --on: oklch(0.66 0.15 155);
 
   /* The three things the app finds and expects you to deal with. They
-     share badge slots — a row can carry two at once, and the status bar
-     carries all three — so each gets its own hue and keeps it
+     share badge slots. A row can carry two at once, and the status bar
+     carries all three, so each gets its own hue and keeps it
      everywhere: a glance says WHICH finding without reading the word.
      Spread far apart on the wheel, and clear of --on and --destructive,
      which are the other two hues a row can show.

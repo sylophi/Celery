@@ -134,7 +134,7 @@ function ModRow({
         {remote?.category ?? ""}
       </span>
       {/* Hard dependents only, enabled or not. An orphan therefore
-          never shows one and an unused mod usually does — usually,
+          never shows one and an unused mod usually does. Only usually,
           because a mod wanted only as an OPTIONAL dependency still
           counts as unused while leaving this column blank. */}
       <span

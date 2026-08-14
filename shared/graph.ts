@@ -76,7 +76,7 @@ export function buildIndex(snapshot: ModsSnapshot): ModIndex {
       }
     }
     // A multi-entry manifest can list the same provider optionally in
-    // one entry and hard in a later one; the per-entry guard above only
+    // one entry and hard in a later one. The per-entry guard above only
     // sees what `hard` held at the time. Hard wins, or the file lands in
     // both reverse maps and gets counted twice as a dependent.
     for (const provider of hard) optional.delete(provider);
@@ -195,11 +195,11 @@ export function planDisable(index: ModIndex, fileNames: string[]): DisablePlan {
 // than the installed set: a disabled collab "using" a helper doesn't
 // justify Everest loading that helper. Favorites are skipped, since a
 // starred mod is kept on purpose. Hard and optional referrers count the
-// same — either is a mod that asked for this.
+// same, since either is a mod that asked for this.
 //
 // Both findings below are this same pass, differing only in whether the
 // pairing came back empty. They stay separate exports because they are
-// separate problems with opposite answers; the repeated walk costs
+// separate problems with opposite answers. The repeated walk costs
 // ~0.1ms over a 150-mod folder, a few times per session.
 // Both finders hand back the files themselves, not their names: every
 // caller wants a size or a label off them, and the index they came from
@@ -226,12 +226,12 @@ function idleSupportMods(index: ModIndex): IdleSupportMod[] {
   );
 }
 
-// Orphans: nothing in the folder lists them as a dependency — not an
-// enabled mod, not a disabled one. Nothing is coming back for them, so
+// Orphans: nothing in the folder lists them as a dependency, not an
+// enabled mod and not a disabled one. Nothing is coming back for them, so
 // the answer is to delete them.
 export function findOrphans(index: ModIndex): ModFile[] {
-  // A file whose manifest could not be read — a zip locked mid-scan, a
-  // malformed archive — declares no dependencies, so everything it
+  // A file whose manifest could not be read (a zip locked mid-scan, a
+  // malformed archive) declares no dependencies, so everything it
   // actually needs looks unwanted. "Nothing in the folder asks for
   // this" is a claim that needs a complete graph, and the only action
   // offered for an orphan deletes it, so while any manifest is
@@ -243,13 +243,13 @@ export function findOrphans(index: ModIndex): ModFile[] {
     .map((entry) => entry.file);
 }
 
-// The mods that want it, all of them currently disabled — which is the
+// The mods that want it, all of them currently disabled. That is the
 // whole of what makes this unused rather than an orphan.
 export type Unused = IdleSupportMod;
 
 // Unused: mods DO ask for these, but every one of those mods is
 // disabled, so Everest is loading them for nobody. Deleting one would
-// break its dependents the moment they came back; disabling costs
+// break its dependents the moment they came back. Disabling costs
 // nothing, because re-enabling any of them pulls this in again through
 // the hard-dep cascade. So the answer is to stop loading them.
 export function findUnused(index: ModIndex): Unused[] {

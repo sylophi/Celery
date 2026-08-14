@@ -26,7 +26,7 @@ export function OrphanDialog({
     <ReviewDialog<ModFile>
       open={open}
       title="orphans"
-      blurb="Enabled, and nothing installed asks for them — not even a disabled mod. Everest loads them for nothing and nothing is coming back for them. Starred mods are never counted as orphans."
+      blurb="Enabled, and nothing installed asks for them, not even a disabled mod. Everest loads them for nothing and nothing is coming back for them. Starred mods are never counted as orphans."
       items={orphans}
       keyOf={(file) => file.fileName}
       nameOf={(file) => displayName(file.fileName)}

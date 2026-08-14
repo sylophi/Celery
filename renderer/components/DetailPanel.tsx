@@ -450,13 +450,13 @@ function ModFacts({
         )}
       </div>
       {/* The panel is the one place with room to say what the word means
-          and what follows from it — which for an unused mod is usually
-          "nothing", worth saying outright. */}
+          and what follows from it. For an unused mod that is usually
+          "nothing", which is worth saying outright. */}
       {idle && (
         <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
           {idle.kind === "orphan"
             ? "Enabled, and no installed mod asks for it. Nothing is coming back for it, so it is safe to delete."
-            : `Enabled, but the ${idle.wantedBy.length === 1 ? "one mod that wants it is" : `${idle.wantedBy.length} mods that want it are`} disabled. Turning it off is free — re-enabling one of them brings it back.`}
+            : `Enabled, but the ${idle.wantedBy.length === 1 ? "one mod that wants it is" : `${idle.wantedBy.length} mods that want it are`} disabled. Turning it off is free, since re-enabling one of them brings it back.`}
         </p>
       )}
     </>

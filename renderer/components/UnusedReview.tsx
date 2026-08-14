@@ -3,7 +3,7 @@ import type { Unused } from "@shared/graph";
 import { ReviewDialog } from "@/components/ui/review-dialog";
 import { displayName, formatBytes } from "@/lib/utils";
 
-// Unused: enabled, and mods DO ask for them — every one of those mods
+// Unused: enabled, and mods DO ask for them. Every one of those mods
 // just happens to be disabled. So they are loading for nobody, and the
 // answer is to stop loading them. Deleting is not offered: these are
 // wanted, and the mods that want them would come back broken. Nothing

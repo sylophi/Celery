@@ -4,8 +4,8 @@ import { Dialog } from "./dialog";
 import { cn } from "@/lib/utils";
 
 // "Here is what I found, untick what you want to keep, then act on the
-// rest." Every finding the app expects you to deal with — orphans,
-// unused mods, out-of-date ones — is that same shape, so the selection
+// rest." Every finding the app expects you to deal with (orphans,
+// unused mods, out-of-date ones) is that same shape, so the selection
 // state, the list chrome and the footer live here and the callers
 // supply only what differs: the blurb, the per-row detail, and what the
 // buttons do.

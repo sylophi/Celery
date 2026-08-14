@@ -6,7 +6,7 @@ function describe(err: unknown): string | undefined {
   return undefined;
 }
 
-// Same title + same error text collapses into one toast — a batch that
+// Same title + same error text collapses into one toast. A batch that
 // fails the same way for every mod should say so once.
 export function notifyError(message: string, err?: unknown): void {
   const description = describe(err);

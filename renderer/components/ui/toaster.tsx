@@ -6,7 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 // has nothing to do with where you triggered it from. Bottom-right,
 // clear of the status bar, which is the readout that does not go away.
 //
-// Everything is repainted in the app's own tokens; sonner's defaults
+// Everything is repainted in the app's own tokens. Sonner's defaults
 // bring their own palette, and `!` outranks its inline utilities.
 export function Toaster() {
   const { theme } = useTheme();
@@ -20,7 +20,7 @@ export function Toaster() {
         classNames: {
           toast:
             "!bg-popover !text-popover-foreground !border !border-border !shadow-floating",
-          // The app disables text selection globally; a message you may
+          // The app disables text selection globally. A message you may
           // need to copy (a filesystem error) is the exception.
           title: "!text-xs !select-text",
           description: "!text-[11px] !text-muted-foreground !select-text",

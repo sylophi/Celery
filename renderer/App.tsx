@@ -89,8 +89,8 @@ export function App() {
   };
 
   // Two separate problems, found separately. The views only ever draw
-  // one badge per mod, so they get the two folded into a single lookup;
-  // the reviews get their own list, since each does its own thing.
+  // one badge per mod, so they get the two folded into a single lookup.
+  // The reviews get their own list, since each does its own thing.
   const orphanFiles = index ? findOrphans(index) : [];
   const unusedRows = index ? findUnused(index) : [];
   const idle = new Map<string, IdleState>();

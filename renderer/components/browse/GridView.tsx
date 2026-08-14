@@ -76,8 +76,8 @@ function ModCard({
 
   // There is room for one badge, so they queue worst news first: a
   // broken mod outranks a wasteful one, which outranks a merely out of
-  // date one. Unused comes last — it is a note, and an update is the
-  // more useful thing to know about a mod that is otherwise fine.
+  // date one. Unused comes last, because it is a note and an update is
+  // the more useful thing to know about a mod that is otherwise fine.
   const badge = [
     {
       when: missing > 0 || file.parseError !== undefined,

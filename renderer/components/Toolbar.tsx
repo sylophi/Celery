@@ -121,7 +121,7 @@ export function Toolbar({
   );
 }
 
-// A readout, not a control panel — except for the counts that ask
+// A readout, not a control panel, except for the counts that ask
 // something of you. Those are chips wearing their finding's hue, and
 // clicking one opens its review, so the number and the thing you do
 // about it are the same target. The rest is text and looks like it.

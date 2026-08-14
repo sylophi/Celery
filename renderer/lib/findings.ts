@@ -55,8 +55,8 @@ export const FINDING: Record<
 };
 
 // The two findings a mod can carry in its one badge slot. They are
-// mutually exclusive — an orphan is precisely one nothing wants — so a
-// mod has at most one, while an update sits alongside either.
+// mutually exclusive, since an orphan is precisely one nothing wants,
+// so a mod has at most one. An update sits alongside either.
 export type IdleState =
   | { kind: "orphan" }
   | { kind: "unused"; wantedBy: string[] };
