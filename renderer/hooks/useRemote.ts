@@ -47,7 +47,7 @@ export function useResolveMissing(names: string[]) {
 function invalidateAfterFilesChanged(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
-  void queryClient.invalidateQueries({ queryKey: queryKeys.mods });
+  void queryClient.invalidateQueries({ queryKey: queryKeys.modsAll });
   void queryClient.invalidateQueries({ queryKey: queryKeys.remoteOverview });
   void queryClient.invalidateQueries({ queryKey: ["remote", "missing"] });
 }

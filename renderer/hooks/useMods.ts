@@ -10,10 +10,16 @@ export function useConfig() {
   });
 }
 
-export function useMods() {
+export function useMods(folder: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.mods,
-    queryFn: () => window.api.mods.scan(),
+    queryKey: queryKeys.mods(folder ?? ""),
+    // The key's folder travels with the request, so a refetch that
+    // races a folder change fails instead of filing another folder's
+    // mods under this one.
+    queryFn: () => window.api.mods.scan({ folder: folder! }),
+    // Nothing to scan before onboarding, and a scan that answered
+    // "no mods" would be cached as this folder's answer.
+    enabled: Boolean(folder),
     // Scans hit the manifest cache after the first run, but keep manual
     // control: rescan on demand, not on every focus.
     refetchOnWindowFocus: false,
@@ -30,8 +36,11 @@ export function useSetEnabled() {
   return useMutation({
     mutationFn: (changes: { fileName: string; enabled: boolean }[]) =>
       window.api.mods.setEnabled(changes),
+    // Keyed off the snapshot's own folder, so a write that lands after
+    // the folder changed updates the folder it was made in rather than
+    // the one now on screen.
     onSuccess: (snapshot) => {
-      queryClient.setQueryData(queryKeys.mods, snapshot);
+      queryClient.setQueryData(queryKeys.mods(snapshot.folder), snapshot);
     },
   });
 }
@@ -44,7 +53,7 @@ export function useRemoveMods() {
   return useMutation({
     mutationFn: (fileNames: string[]) => window.api.mods.remove(fileNames),
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.mods });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.modsAll });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.remoteOverview,
       });
@@ -63,7 +72,7 @@ export function useSetFavorite() {
       favorite: boolean;
     }) => window.api.mods.setFavorite(fileName, favorite),
     onSuccess: (snapshot) => {
-      queryClient.setQueryData(queryKeys.mods, snapshot);
+      queryClient.setQueryData(queryKeys.mods(snapshot.folder), snapshot);
     },
   });
 }

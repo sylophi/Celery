@@ -33,7 +33,17 @@ export function SettingsDialog({
     if (!picked) return;
     const config = await window.api.config.read();
     await window.api.config.write({ ...config, modsFolder: picked });
-    await queryClient.invalidateQueries();
+    // The scan and the overview are the folder's. Per-mod artwork and
+    // metadata are keyed by mod name and survive the switch.
+    await queryClient.invalidateQueries({ queryKey: queryKeys.config });
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.remoteOverview,
+    });
+    // Picking the same folder again is a refresh request, and the scan's
+    // key does not change, so nothing else would refetch it.
+    if (picked === folder) {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.modsAll });
+    }
   };
 
   return (

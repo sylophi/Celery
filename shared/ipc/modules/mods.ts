@@ -4,8 +4,15 @@ import { ModsSnapshotSchema, RemoveResultSchema } from "../../schemas/mods";
 
 export const modsContract = {
   // Scans the configured Mods folder (manifest reads are cached by file
-  // size+mtime, so rescans are cheap). Returns the full snapshot.
-  scan: invoke("mods:scan", z.void(), ModsSnapshotSchema),
+  // size+mtime, so rescans are cheap). Returns the full snapshot. The
+  // caller names the folder it believes is configured, so a scan that
+  // raced a folder change cannot come back answering about the other
+  // one. The path scanned is still config's, never the renderer's.
+  scan: invoke(
+    "mods:scan",
+    z.object({ folder: z.string() }),
+    ModsSnapshotSchema,
+  ),
   // Applies a batch of enabled-state changes in one blacklist.txt write
   // (cascades arrive as one batch) and returns the fresh snapshot.
   setEnabled: invoke(
