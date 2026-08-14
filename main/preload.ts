@@ -1,7 +1,7 @@
 // Preload script. Runs in an isolated context with access to Node +
 // Electron APIs. Exposes a typed `window.api` to the renderer.
 import { contextBridge } from "electron";
-import { TRAFFIC_LIGHT_INSET } from "@shared/chrome";
+import { TOOLBAR_HEIGHT, TRAFFIC_LIGHT_INSET } from "@shared/chrome";
 import {
   config,
   dialog,
@@ -21,6 +21,9 @@ const api = {
   // take. Only macOS puts them there; Windows reports its trailing-edge
   // claim to CSS itself, through the Window Controls Overlay.
   chromeInsetStart: process.platform === "darwin" ? TRAFFIC_LIGHT_INSET : 0,
+  // The height Windows sized its caption strip to; the toolbar has to
+  // match it or the buttons sit off-centre.
+  toolbarHeight: TOOLBAR_HEIGHT,
   config,
   dialog,
   folderState,

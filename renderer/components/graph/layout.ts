@@ -48,6 +48,9 @@ export type Region = {
   variant: "region" | "island";
 };
 
+// Hard dependency, optional reference, or an edge into a missing dep.
+export type EdgeKind = "hard" | "optional" | "missing";
+
 export type Bounds = { x: number; y: number; width: number; height: number };
 // A placed node is just a box, same as any other.
 export type NodePos = Bounds;
@@ -57,13 +60,12 @@ export type Layout = {
   // Extent of everything placed, nodes and region panels alike. The view
   // frames the graph from this rather than measuring the rendered DOM.
   bounds: Bounds;
-  // Everything the layout placed, i.e. exactly what the view renders.
-  nodes: Set<string>;
   regions: Region[];
-  // Whether an edge between two placed nodes is worth drawing. Each
-  // layout answers for itself, because what counts as signal differs:
-  // see the rules at each return site.
-  drawEdge: (from: string, to: string) => boolean;
+  // Whether an edge is worth drawing. Each layout answers for itself,
+  // because what counts as signal differs — see the rules at each
+  // return site. This is the only place either question is decided, so
+  // "why isn't this edge drawn" has one answer to read.
+  drawEdge: (from: string, to: string, kind: EdgeKind) => boolean;
   // Shared helpers -> how many top-level mods pull them in. Stands in
   // for the edges the overview does not draw.
   usedBy: Map<string, number>;
@@ -496,12 +498,17 @@ export function layoutOverview(
   return {
     positions,
     bounds: boundsOf(positions, allRegions),
-    nodes: new Set(positions.keys()),
     regions: allRegions,
     // Only edges that stay inside one island: short, local, and never
     // crossing. The long ones up to the shared shelf are the hairball,
     // and the shelf's use counts say the same thing without the ink.
-    drawEdge: (from, to) => {
+    // That applies to a missing dep too — one that several mods want
+    // sits on the shelf like any other shared node, and its dependents
+    // still show their own "N missing" count.
+    drawEdge: (from, to, kind) => {
+      // Optional references never earn a line in the overview; they are
+      // the crosshatch this layout exists to avoid.
+      if (kind === "optional") return false;
       const island = islandOf.get(from);
       return island !== undefined && island === islandOf.get(to);
     },
@@ -643,11 +650,12 @@ export function layoutFocus(
   return {
     positions,
     bounds: boundsOf(positions, regions),
-    nodes: new Set(level.keys()),
     regions,
     // Anything touching the selection, plus the steps that carry an
-    // outer node in towards it. Two exceptions, both cases where the
-    // line repeats what the picture already says:
+    // outer node in towards it. Optional references get in only where
+    // they touch the selection, since the spread put them a single hop
+    // out. Two exceptions beyond that, both cases where the line
+    // repeats what the picture already says:
     //
     // Edges BETWEEN two nodes on the same level (both already connect to
     // the middle) are what turn a 22-dependent fan back into a thicket.
@@ -655,13 +663,14 @@ export function layoutFocus(
     // And past FAN_LIMIT neighbours the fan itself stops being readable:
     // 90 lines converging on one node are a grey haze, while sitting
     // inside the "needs" panel already means "the selection needs this".
-    drawEdge: (from, to) => {
+    drawEdge: (from, to, kind) => {
       const a = level.get(from);
       const b = level.get(to);
       if (a === undefined || b === undefined) return false;
       if (from === selectedId || to === selectedId) {
         return !hazy.has(from === selectedId ? b : a);
       }
+      if (kind === "optional") return false;
       return Math.sign(a) === Math.sign(b) && Math.abs(a - b) === 1;
     },
     usedBy: new Map(),

@@ -15,6 +15,7 @@ import type {
 } from "@shared/schemas";
 import type { ModIndex } from "@shared/graph";
 import { Button } from "@/components/ui/button";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useSaveFolderState, useSetFavorite } from "@/hooks/useMods";
 import {
@@ -197,6 +198,7 @@ export function DetailPanel({
             </Button>
             {updateProgress?.phase === "downloading" && (
               <ProgressBar
+                className="mt-1 w-full"
                 receivedBytes={updateProgress.receivedBytes}
                 totalBytes={updateProgress.totalBytes}
               />
@@ -540,28 +542,6 @@ function RemoteInfoSection({
   );
 }
 
-function ProgressBar({
-  receivedBytes,
-  totalBytes,
-}: {
-  receivedBytes: number;
-  totalBytes: number;
-}) {
-  const pct =
-    totalBytes > 0 ? Math.min(100, (receivedBytes / totalBytes) * 100) : null;
-  return (
-    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">
-      <div
-        className={cn(
-          "h-full rounded-full bg-primary transition-[width] duration-200",
-          pct === null && "animate-pulse",
-        )}
-        style={{ width: `${pct ?? 100}%` }}
-      />
-    </div>
-  );
-}
-
 // Missing dependencies, enriched by the remote database: each name is
 // resolved to a version/size (transitively: a missing dep's own
 // missing deps join the plan) and installable in one click.
@@ -620,6 +600,7 @@ function MissingSection({
               )}
               {p?.phase === "downloading" && (
                 <ProgressBar
+                  className="mt-1 w-full"
                   receivedBytes={p.receivedBytes}
                   totalBytes={p.totalBytes}
                 />
@@ -706,7 +687,12 @@ function DepRow({
 // open so choosing a mod never reflows the grid behind it.
 export function EmptyPanel() {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 border-l border-border bg-popover px-6 text-center">
+    <div
+      className={cn(
+        panelClass("docked"),
+        "items-center justify-center gap-2 px-6 text-center",
+      )}
+    >
       <PackageOpenIcon
         aria-hidden
         className="size-5 text-muted-foreground/40"

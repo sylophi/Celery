@@ -74,22 +74,29 @@ export const modsHandlers: Handlers<typeof modsContract, HandlerContext> = {
         throw new Error(`Unknown mod file: ${fileName}`);
     }
 
+    // Trash, never unlink: a mis-click has to stay recoverable, and a
+    // 700MB audio pack is not something to re-download lightly. These
+    // run together — unlike the downloads, there is no mirror to be
+    // kind to, and clearing 60 orphans one round trip at a time is just
+    // slow.
+    const results = await Promise.allSettled(
+      fileNames.map((fileName) => shell.trashItem(path.join(folder, fileName))),
+    );
     const trashed: string[] = [];
     const failed: { fileName: string; error: string }[] = [];
-    for (const fileName of fileNames) {
-      try {
-        // Trash, never unlink: a mis-click has to stay recoverable, and
-        // a 700MB audio pack is not something to re-download lightly.
-        // oxlint-disable-next-line no-await-in-loop
-        await shell.trashItem(path.join(folder, fileName));
-        trashed.push(fileName);
-      } catch (error) {
+    results.forEach((result, i) => {
+      const fileName = fileNames[i]!;
+      if (result.status === "fulfilled") trashed.push(fileName);
+      else {
         failed.push({
-          fileName,
-          error: error instanceof Error ? error.message : String(error),
+          fileName: fileName,
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason),
         });
       }
-    }
+    });
     if (trashed.length > 0) await forgetFiles(folder, trashed);
     return { trashed, failed };
   },

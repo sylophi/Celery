@@ -86,14 +86,18 @@ export function App() {
   };
 
   const orphans = index ? new Set(findOrphans(index)) : new Set<string>();
-  const updates = new Set(
-    Object.entries(overview.data?.byFile ?? {})
-      .filter(([, remote]) => remote.updateAvailable)
-      .map(([fileName]) => fileName),
-  );
   // How each zip maps onto GameBanana: its category, whether a newer
   // build exists, and the mod Name the artwork is fetched under.
   const remoteOf = (fileName: string) => overview.data?.byFile[fileName];
+
+  // Derived once and shared: the status bar's count and the review's
+  // rows have to be the same mods. Walking the installed files rather
+  // than the database's keys also drops any entry with no zip behind it.
+  const outdated: Outdated[] = (index?.files ?? []).flatMap((file) => {
+    const remote = remoteOf(file.fileName);
+    return remote?.updateAvailable === true ? [{ file, remote }] : [];
+  });
+  const updates = new Set(outdated.map((row) => row.file.fileName));
 
   // Which mods count as "dependencies" (vs top-level mods you play):
   // hard dependents only (a mod that is merely optionally referenced
@@ -140,26 +144,25 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Every report has to bump the nonce: StatusPill keys its animation on
+  // it, so two identical messages in a row would otherwise not re-show.
+  const report = (text: string, kind: Status["kind"] = "ok") =>
+    setStatus((prev) => ({ text, kind, nonce: (prev?.nonce ?? 0) + 1 }));
+  const reportError = (prefix: string, error: unknown) =>
+    report(
+      `${prefix}: ${error instanceof Error ? error.message : String(error)}`,
+      "error",
+    );
+
   const apply = (
     changes: { fileName: string; enabled: boolean }[],
     message: string,
   ) => {
     setEnabled.mutate(changes, {
-      onSuccess: () =>
-        setStatus((prev) => ({
-          text: message,
-          kind: "ok",
-          nonce: (prev?.nonce ?? 0) + 1,
-        })),
-      // A failed write (locked blacklist.txt with the game running,
-      // permissions) must be visible, not a toggle that silently
-      // snaps back.
-      onError: (error) =>
-        setStatus((prev) => ({
-          text: `couldn't write blacklist: ${error instanceof Error ? error.message : String(error)}`,
-          kind: "error",
-          nonce: (prev?.nonce ?? 0) + 1,
-        })),
+      onSuccess: () => report(message),
+      // A failed write (locked blacklist.txt, permissions) must be
+      // visible, not a toggle that silently snaps back.
+      onError: (error) => reportError("couldn't write blacklist", error),
     });
   };
 
@@ -248,32 +251,20 @@ export function App() {
   const orphanFiles = (index?.files ?? []).filter((f) =>
     orphans.has(f.fileName),
   );
-  const outdated: Outdated[] = (index?.files ?? []).flatMap((file) => {
-    const remote = remoteOf(file.fileName);
-    return remote?.updateAvailable === true ? [{ file, remote }] : [];
-  });
-
   const runUpdate = (fileNames: string[]) => {
     updateMods.mutate(fileNames, {
       onSuccess: (result) => {
         // Only close once everything worked: a failed row has to stay
         // on screen with its reason attached.
         if (result.failed.length === 0) setUpdatesOpen(false);
-        setStatus((prev) => ({
-          text:
-            result.failed.length > 0
-              ? `updated ${result.updated.length}, ${result.failed.length} failed`
-              : `updated ${result.updated.length} mods`,
-          kind: result.failed.length > 0 ? "error" : "ok",
-          nonce: (prev?.nonce ?? 0) + 1,
-        }));
+        report(
+          result.failed.length > 0
+            ? `updated ${result.updated.length}, ${result.failed.length} failed`
+            : `updated ${result.updated.length} mods`,
+          result.failed.length > 0 ? "error" : "ok",
+        );
       },
-      onError: (error) =>
-        setStatus((prev) => ({
-          text: `couldn't update: ${error instanceof Error ? error.message : String(error)}`,
-          kind: "error",
-          nonce: (prev?.nonce ?? 0) + 1,
-        })),
+      onError: (error) => reportError("couldn't update", error),
     });
   };
 
@@ -291,20 +282,13 @@ export function App() {
     }
     removeMods.mutate(fileNames, {
       onSuccess: (result) =>
-        setStatus((prev) => ({
-          text:
-            result.failed.length > 0
-              ? `trashed ${result.trashed.length}, couldn't remove ${result.failed.length}`
-              : `moved ${label} to the trash`,
-          kind: result.failed.length > 0 ? "error" : "ok",
-          nonce: (prev?.nonce ?? 0) + 1,
-        })),
-      onError: (error) =>
-        setStatus((prev) => ({
-          text: `couldn't remove: ${error instanceof Error ? error.message : String(error)}`,
-          kind: "error",
-          nonce: (prev?.nonce ?? 0) + 1,
-        })),
+        report(
+          result.failed.length > 0
+            ? `trashed ${result.trashed.length}, couldn't remove ${result.failed.length}`
+            : `moved ${label} to the trash`,
+          result.failed.length > 0 ? "error" : "ok",
+        ),
+      onError: (error) => reportError("couldn't remove", error),
     });
   };
 

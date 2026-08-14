@@ -20,6 +20,7 @@ import {
   isGhostId,
   layoutFocus,
   layoutOverview,
+  type EdgeKind,
 } from "./layout";
 
 // What the graph has to keep clear of: the minimap in the bottom-left
@@ -117,16 +118,9 @@ function GraphViewInner({
   const aspect = paneHeight > 0 ? usableWidth / usableHeight : 1.6;
 
   const layout = focused
-    ? layoutFocus(
-        index,
-        focused,
-        new Set([...scope, focused]),
-        dependencySet,
-        ghostDeps,
-        aspect,
-      )
+    ? layoutFocus(index, focused, scope, dependencySet, ghostDeps, aspect)
     : layoutOverview(index, visible, dependencySet, ghostDeps, aspect);
-  const { positions, bounds, nodes: drawn, regions, drawEdge, usedBy } = layout;
+  const { positions, bounds, regions, drawEdge, usedBy } = layout;
 
   const nodes: AnyFlowNode[] = (() => {
     const out: AnyFlowNode[] = [];
@@ -150,7 +144,7 @@ function GraphViewInner({
     }
     for (const file of index.files) {
       const pos = positions.get(file.fileName);
-      if (!pos || !drawn.has(file.fileName)) continue;
+      if (!pos) continue;
       out.push({
         id: file.fileName,
         type: "mod",
@@ -170,7 +164,7 @@ function GraphViewInner({
     }
     for (const [id, dependents] of ghostDependents) {
       const pos = positions.get(id);
-      if (!pos || !drawn.has(id)) continue;
+      if (!pos) continue;
       out.push({
         id,
         type: "ghost",
@@ -187,15 +181,16 @@ function GraphViewInner({
 
   const edges: Edge[] = (() => {
     const out: Edge[] = [];
-    const push = (from: string, to: string, kind: string) => {
-      if (!drawn.has(from) || !drawn.has(to)) return;
-      if (!drawEdge(from, to)) return;
+    // A node the layout did not place has no position, which is the
+    // same question `drawEdge` already answers for both layouts.
+    const push = (from: string, to: string, kind: EdgeKind) => {
+      if (!drawEdge(from, to, kind)) return;
       const active = focused !== null && (from === focused || to === focused);
       out.push({
         id: `${kind}:${from}->${to}`,
         source: from,
         target: to,
-        className: [kind !== "h" && `edge-${kind}`, active && "edge-active"]
+        className: [kind !== "hard" && `edge-${kind}`, active && "edge-active"]
           .filter(Boolean)
           .join(" "),
         markerEnd: active
@@ -203,19 +198,14 @@ function GraphViewInner({
           : undefined,
       });
     };
+    // Every candidate edge is offered; the layout decides. Nothing here
+    // second-guesses it, so the policy stays in one file.
     for (const [from, deps] of index.hardDeps) {
-      for (const to of deps) push(from, to, "h");
+      for (const to of deps) push(from, to, "hard");
     }
-    // Optional edges only ever hang off the selection; drawn everywhere
-    // they add crosshatch, not information.
-    if (focused) {
-      for (const [from, deps] of index.optionalDeps) {
-        for (const to of deps) {
-          if (from === focused || to === focused) push(from, to, "optional");
-        }
-      }
+    for (const [from, deps] of index.optionalDeps) {
+      for (const to of deps) push(from, to, "optional");
     }
-    // A missing dependency is a problem worth the ink wherever it shows.
     for (const [ghost, dependents] of ghostDependents) {
       for (const from of dependents) push(from, ghost, "missing");
     }

@@ -1,103 +1,43 @@
 import { useRef, useState } from "react";
 import { StarIcon } from "lucide-react";
-import type { ModIndex } from "@shared/graph";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { useSetFavorite } from "@/hooks/useMods";
 import { useOnScreen } from "@/hooks/useOnScreen";
 import { useRemoteModInfo } from "@/hooks/useRemote";
 import { ModIconGlyph } from "@/lib/modIcons";
 import { cn, displayName } from "@/lib/utils";
-import { BrowseHeader } from "./BrowseHeader";
-import { BrowseSection } from "./Section";
-import { makeComparator, type SortMode } from "./sort";
+import {
+  BrowseFrame,
+  useBrowseScroller,
+  type BrowseProps,
+} from "./BrowseFrame";
 
 // The gallery: mods as their own artwork, which is how anyone actually
 // recognises a map pack. The GameBanana screenshot carries the tile and
 // the category glyph drops to a corner chip, where it also stands in as
 // the whole tile for the many helpers that have no art to show.
 
-export function GridView({
-  files,
-  total,
-  query,
-  sort,
-  onSort,
-  orphans,
-  updates,
-  index,
-  dependencySet,
-  remoteOf,
-  selectedId,
-  onSelect,
-}: {
-  files: ModFile[];
-  total: number;
-  query: string;
-  sort: SortMode;
-  onSort: (sort: SortMode) => void;
-  orphans: Set<string>;
-  updates: Set<string>;
-  index: ModIndex;
-  dependencySet: Set<string>;
-  remoteOf: (fileName: string) => RemoteFileStatus | undefined;
-  selectedId: string | null;
-  onSelect: (fileName: string | null) => void;
-}) {
-  const comparator = makeComparator(sort, (f) => remoteOf(f)?.category);
-  const section = (label: "mods" | "dependencies", list: ModFile[]) => (
-    <BrowseSection label={label} count={list.length}>
-      <ul className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
-        {list.map((file) => (
-          <ModCard
-            key={file.fileName}
-            file={file}
-            remote={remoteOf(file.fileName)}
-            selected={file.fileName === selectedId}
-            orphan={orphans.has(file.fileName)}
-            updateAvailable={updates.has(file.fileName)}
-            missing={index.missing.get(file.fileName)?.length ?? 0}
-            onSelect={onSelect}
-          />
-        ))}
-      </ul>
-    </BrowseSection>
-  );
-
+export function GridView(props: BrowseProps) {
+  const { orphans, updates, index, remoteOf, selectedId, onSelect } = props;
   return (
-    <div className="flex h-full flex-col">
-      <BrowseHeader
-        shown={files.length}
-        total={total}
-        query={query}
-        sort={sort}
-        onSort={onSort}
-      />
-      {/* No top padding on the scroll box itself: `sticky top-0`
-          resolves against its padding edge, so any would leave a
-          band above the section headers for rows to show through. */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8">
-        {files.length === 0 ? (
-          <p className="py-16 text-center text-xs text-muted-foreground/60">
-            no mod matches
-          </p>
-        ) : (
-          <div className="flex flex-col gap-7 pt-3">
-            {section(
-              "mods",
-              files
-                .filter((f) => !dependencySet.has(f.fileName))
-                .toSorted(comparator),
-            )}
-            {section(
-              "dependencies",
-              files
-                .filter((f) => dependencySet.has(f.fileName))
-                .toSorted(comparator),
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    <BrowseFrame
+      {...props}
+      className="flex h-full flex-col"
+      gapClassName="gap-7"
+      listClassName="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2"
+      renderItem={(file) => (
+        <ModCard
+          key={file.fileName}
+          file={file}
+          remote={remoteOf(file.fileName)}
+          selected={file.fileName === selectedId}
+          orphan={orphans.has(file.fileName)}
+          updateAvailable={updates.has(file.fileName)}
+          missing={index.missing.get(file.fileName)?.length ?? 0}
+          onSelect={onSelect}
+        />
+      )}
+    />
   );
 }
 
@@ -121,7 +61,7 @@ function ModCard({
   const setFavorite = useSetFavorite();
   const name = displayName(file.fileName);
   const card = useRef<HTMLLIElement>(null);
-  const onScreen = useOnScreen(card);
+  const onScreen = useOnScreen(card, useBrowseScroller());
   const info = useRemoteModInfo(
     remote?.name ?? file.entries[0]?.name,
     onScreen,

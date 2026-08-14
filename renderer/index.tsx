@@ -10,6 +10,10 @@ document.documentElement.style.setProperty(
   "--chrome-inset-start",
   `${window.api.chromeInsetStart}px`,
 );
+document.documentElement.style.setProperty(
+  "--toolbar-height",
+  `${window.api.toolbarHeight}px`,
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {

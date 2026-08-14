@@ -42,7 +42,7 @@ export function Toolbar({
   return (
     <header
       data-titlebar
-      className="z-40 flex h-11 shrink-0 items-center gap-2.5 border-b border-border"
+      className="z-40 flex h-(--toolbar-height) shrink-0 items-center gap-2.5 border-b border-border"
       style={dragRegion("drag")}
     >
       <span className="shrink-0 text-[13px] font-semibold tracking-tight">

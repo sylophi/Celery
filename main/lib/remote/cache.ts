@@ -50,17 +50,33 @@ async function writeEntry(
   await writeFile(`${target}.meta.json`, JSON.stringify(meta), "utf8");
 }
 
-async function touchMeta(key: string, meta: CacheMeta): Promise<void> {
+async function touchMeta(key: string, meta: CacheMeta): Promise<number> {
+  const fetchedAt = Date.now();
   await writeFile(
     `${cachePath(key)}.meta.json`,
-    JSON.stringify({ ...meta, fetchedAt: Date.now() }),
+    JSON.stringify({ ...meta, fetchedAt }),
     "utf8",
   );
+  return fetchedAt;
 }
 
-async function readBody(key: string): Promise<Buffer | null> {
+// Bodies already read this process, keyed by cache key and the meta's
+// fetchedAt. The point is IDENTITY: the parsed-form memos in db.ts hold
+// `{ body, value }` and re-parse unless handed the same Buffer back, so
+// a fresh Buffer per read silently defeated them and every caller
+// re-parsed the 1.3MB update database (~480ms of blocked main thread).
+const bodies = new Map<string, { fetchedAt: number; body: Buffer }>();
+
+async function readBody(
+  key: string,
+  fetchedAt: number,
+): Promise<Buffer | null> {
+  const hit = bodies.get(key);
+  if (hit && hit.fetchedAt === fetchedAt) return hit.body;
   try {
-    return await readFile(cachePath(key));
+    const body = await readFile(cachePath(key));
+    bodies.set(key, { fetchedAt, body });
+    return body;
   } catch {
     return null;
   }
@@ -71,14 +87,34 @@ async function readBody(key: string): Promise<Buffer | null> {
 // is revalidated; on any network failure a stale copy is still
 // returned. Returns null only when there is no cached copy and the
 // fetch failed; callers treat that as "remote unavailable".
-export async function fetchCached(
+export function fetchCached(
+  key: string,
+  url: string,
+  ttlMs: number,
+): Promise<Buffer | null> {
+  // One read or fetch per key at a time. The grid asks for per-mod info
+  // for every tile that scrolls into view, and each of those consults
+  // the update database first; without this they each did their own
+  // read of it.
+  const pending = inFlight.get(key);
+  if (pending) return pending;
+  const run = fetchUncached(key, url, ttlMs).finally(() =>
+    inFlight.delete(key),
+  );
+  inFlight.set(key, run);
+  return run;
+}
+
+const inFlight = new Map<string, Promise<Buffer | null>>();
+
+async function fetchUncached(
   key: string,
   url: string,
   ttlMs: number,
 ): Promise<Buffer | null> {
   const meta = await readMeta(key);
   if (meta && Date.now() - meta.fetchedAt < ttlMs) {
-    const body = await readBody(key);
+    const body = await readBody(key, meta.fetchedAt);
     if (body) return body;
   }
   const headers: Record<string, string> = {};
@@ -87,16 +123,20 @@ export async function fetchCached(
   try {
     const response = await fetch(url, { headers });
     if (response.status === 304 && meta) {
-      const body = await readBody(key);
+      const body = await readBody(key, meta.fetchedAt);
       if (body) {
-        await touchMeta(key, meta);
+        // Re-key the in-memory copy to the refreshed timestamp, so a
+        // revalidation that changed nothing doesn't force a re-parse.
+        bodies.set(key, { fetchedAt: await touchMeta(key, meta), body });
         return body;
       }
     }
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const body = Buffer.from(await response.arrayBuffer());
+    const fetchedAt = Date.now();
+    bodies.set(key, { fetchedAt, body });
     await writeEntry(key, body, {
-      fetchedAt: Date.now(),
+      fetchedAt,
       ...(response.headers.get("etag")
         ? { etag: response.headers.get("etag")! }
         : {}),
@@ -107,6 +147,6 @@ export async function fetchCached(
     return body;
   } catch {
     // Offline or server trouble: stale beats nothing.
-    return readBody(key);
+    return readBody(key, meta?.fetchedAt ?? 0);
   }
 }

@@ -1,5 +1,4 @@
 import type { Node, NodeProps } from "@xyflow/react";
-import { cn } from "@/lib/utils";
 
 // Background panels the layout emits: the big labelled regions ("mods",
 // "shared", "needs") and the unlabelled island frames that hold a mod
@@ -21,12 +20,7 @@ export function RegionNode({ data }: NodeProps<RegionFlowNode>) {
     );
   }
   return (
-    <div
-      className={cn(
-        "pointer-events-none h-full w-full rounded-2xl",
-        "bg-muted/12 ring-1 ring-border/50 ring-inset",
-      )}
-    >
+    <div className="pointer-events-none h-full w-full rounded-2xl bg-muted/12 ring-1 ring-border/50 ring-inset">
       <div className="flex items-baseline gap-2 px-4 pt-2">
         <span className="text-[13px] font-medium tracking-tight text-foreground/70">
           {data.title}

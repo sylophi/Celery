@@ -1,100 +1,36 @@
 import { StarIcon } from "lucide-react";
-import type { ModIndex } from "@shared/graph";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { useSetFavorite } from "@/hooks/useMods";
 import { ModIconGlyph } from "@/lib/modIcons";
 import { cn, displayName, formatBytes } from "@/lib/utils";
-import { BrowseHeader } from "./BrowseHeader";
-import { BrowseSection } from "./Section";
-import { makeComparator, type SortMode } from "./sort";
+import { BrowseFrame, type BrowseProps } from "./BrowseFrame";
 
 // The dense one. Where the grid trades detail for recognisability, the
 // list spends the same room on the columns you would otherwise have to
 // open each mod to compare: version, category, size, what needs it.
 
-export function ListView({
-  files,
-  total,
-  query,
-  sort,
-  onSort,
-  orphans,
-  updates,
-  index,
-  dependencySet,
-  remoteOf,
-  selectedId,
-  onSelect,
-}: {
-  files: ModFile[];
-  total: number;
-  query: string;
-  sort: SortMode;
-  onSort: (sort: SortMode) => void;
-  orphans: Set<string>;
-  updates: Set<string>;
-  index: ModIndex;
-  dependencySet: Set<string>;
-  remoteOf: (fileName: string) => RemoteFileStatus | undefined;
-  selectedId: string | null;
-  onSelect: (fileName: string | null) => void;
-}) {
-  const comparator = makeComparator(sort, (f) => remoteOf(f)?.category);
-  const section = (label: "mods" | "dependencies", list: ModFile[]) => (
-    <BrowseSection label={label} count={list.length}>
-      <ul>
-        {list.map((file) => (
-          <ModRow
-            key={file.fileName}
-            file={file}
-            remote={remoteOf(file.fileName)}
-            selected={file.fileName === selectedId}
-            orphan={orphans.has(file.fileName)}
-            updateAvailable={updates.has(file.fileName)}
-            missing={index.missing.get(file.fileName)?.length ?? 0}
-            neededBy={index.dependents.get(file.fileName)?.size ?? 0}
-            onSelect={onSelect}
-          />
-        ))}
-      </ul>
-    </BrowseSection>
-  );
-
+export function ListView(props: BrowseProps) {
+  const { orphans, updates, index, remoteOf, selectedId, onSelect } = props;
   return (
-    <div className="@container flex h-full flex-col">
-      <BrowseHeader
-        shown={files.length}
-        total={total}
-        query={query}
-        sort={sort}
-        onSort={onSort}
-      />
-      {/* No top padding on the scroll box itself: `sticky top-0`
-          resolves against its padding edge, so any would leave a
-          band above the section headers for rows to show through. */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8">
-        {files.length === 0 ? (
-          <p className="py-16 text-center text-xs text-muted-foreground/60">
-            no mod matches
-          </p>
-        ) : (
-          <div className="flex flex-col gap-6 pt-3">
-            {section(
-              "mods",
-              files
-                .filter((f) => !dependencySet.has(f.fileName))
-                .toSorted(comparator),
-            )}
-            {section(
-              "dependencies",
-              files
-                .filter((f) => dependencySet.has(f.fileName))
-                .toSorted(comparator),
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    <BrowseFrame
+      {...props}
+      className="@container flex h-full flex-col"
+      gapClassName="gap-6"
+      listClassName=""
+      renderItem={(file) => (
+        <ModRow
+          key={file.fileName}
+          file={file}
+          remote={remoteOf(file.fileName)}
+          selected={file.fileName === selectedId}
+          orphan={orphans.has(file.fileName)}
+          updateAvailable={updates.has(file.fileName)}
+          missing={index.missing.get(file.fileName)?.length ?? 0}
+          neededBy={index.dependents.get(file.fileName)?.size ?? 0}
+          onSelect={onSelect}
+        />
+      )}
+    />
   );
 }
 
