@@ -7,8 +7,8 @@ import { defineConfig } from "vite";
 export default defineConfig({
   resolve: {
     alias: {
-      "@": resolve(__dirname, "renderer"),
-      "@shared": resolve(__dirname, "shared"),
+      "@": resolve(import.meta.dirname, "renderer"),
+      "@shared": resolve(import.meta.dirname, "shared"),
     },
   },
   optimizeDeps: { entries: ["index.html"] },

@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   resolve: {
     alias: {
-      "@shared": resolve(__dirname, "shared"),
+      "@shared": resolve(import.meta.dirname, "shared"),
     },
   },
 });

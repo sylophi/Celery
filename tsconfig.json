@@ -35,6 +35,6 @@
     "renderer/**/*",
     "shared/**/*",
     "forge.config.ts",
-    "vite.*.config.ts"
+    "vite.*.config.mts"
   ]
 }
