@@ -1,5 +1,5 @@
 import { PowerOffIcon } from "lucide-react";
-import type { ModFile } from "@shared/schemas";
+import type { Unused } from "@shared/graph";
 import { ReviewDialog } from "@/components/ui/review-dialog";
 import { displayName, formatBytes } from "@/lib/utils";
 
@@ -10,8 +10,6 @@ import { displayName, formatBytes } from "@/lib/utils";
 // is lost by disabling either, since re-enabling one of those mods
 // pulls its dependencies in again.
 
-export type UnusedRow = { file: ModFile; wantedBy: string[] };
-
 export function UnusedDialog({
   open,
   unused,
@@ -20,13 +18,13 @@ export function UnusedDialog({
   onDisable,
 }: {
   open: boolean;
-  unused: UnusedRow[];
+  unused: Unused[];
   busy: boolean;
   onClose: () => void;
   onDisable: (fileNames: string[]) => void;
 }) {
   return (
-    <ReviewDialog<UnusedRow>
+    <ReviewDialog<Unused>
       open={open}
       title="unused"
       blurb="Enabled, but the only mods that ask for them are disabled, so Everest loads them for nothing. Turning one off costs nothing: enabling a mod that wants it brings it straight back."

@@ -11,7 +11,7 @@ import {
   type Edge,
 } from "@xyflow/react";
 import type { ModIndex } from "@shared/graph";
-import type { IdleState } from "@/lib/idle";
+import type { IdleState } from "@/lib/findings";
 import { GhostNode, type GhostFlowNode } from "./GhostNode";
 import { ModNode, type ModFlowNode } from "./ModNode";
 import { RegionNode, type RegionFlowNode } from "./RegionNode";

@@ -2,7 +2,7 @@ import { StarIcon } from "lucide-react";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { useSetFavorite } from "@/hooks/useMods";
 import { ModIconGlyph } from "@/lib/modIcons";
-import { IDLE_STYLE, type IdleKind } from "@/lib/idle";
+import { FINDING, type IdleKind } from "@/lib/findings";
 import { cn, displayName, formatBytes } from "@/lib/utils";
 import { BrowseFrame, type BrowseProps } from "./BrowseFrame";
 
@@ -113,18 +113,18 @@ function ModRow({
       )}
       {idle !== undefined && (
         <span
-          className={cn("shrink-0 text-[10px]", IDLE_STYLE[idle].text)}
-          title={IDLE_STYLE[idle].hint}
+          className={cn("shrink-0 text-[10px]", FINDING[idle].text)}
+          title={FINDING[idle].hint}
         >
-          {IDLE_STYLE[idle].label}
+          {FINDING[idle].label}
         </span>
       )}
       {updateAvailable && (
         <span
-          className="shrink-0 text-[10px] text-update"
+          className={cn("shrink-0 text-[10px]", FINDING.update.text)}
           title={`GameBanana has ${remote?.latestVersion ?? "a newer build"}`}
         >
-          update
+          {FINDING.update.label}
         </span>
       )}
 

@@ -19,7 +19,7 @@ import {
 import { GraphView } from "@/components/graph/GraphView";
 import { ghostName, isGhostId } from "@/components/graph/layout";
 import { OrphanDialog } from "@/components/OrphanCleanup";
-import { UnusedDialog, type UnusedRow } from "@/components/UnusedReview";
+import { UnusedDialog } from "@/components/UnusedReview";
 import { UpdateDialog, type Outdated } from "@/components/UpdateReview";
 import { GridView } from "@/components/browse/GridView";
 import { ListView } from "@/components/browse/ListView";
@@ -40,7 +40,7 @@ import {
   useRemoteProgress,
   useUpdateMods,
 } from "@/hooks/useRemote";
-import type { IdleState } from "@/lib/idle";
+import type { IdleState } from "@/lib/findings";
 import { queryKeys } from "@/lib/queryKeys";
 import { notifyError, toast } from "@/lib/toast";
 import { displayName, dragRegion } from "@/lib/utils";
@@ -91,12 +91,12 @@ export function App() {
   // Two separate problems, found separately. The views only ever draw
   // one badge per mod, so they get the two folded into a single lookup;
   // the reviews get their own list, since each does its own thing.
-  const orphanNames = index ? findOrphans(index) : [];
-  const unusedList = index ? findUnused(index) : [];
+  const orphanFiles = index ? findOrphans(index) : [];
+  const unusedRows = index ? findUnused(index) : [];
   const idle = new Map<string, IdleState>();
-  for (const fileName of orphanNames) idle.set(fileName, { kind: "orphan" });
-  for (const row of unusedList) {
-    idle.set(row.fileName, { kind: "unused", wantedBy: row.wantedBy });
+  for (const file of orphanFiles) idle.set(file.fileName, { kind: "orphan" });
+  for (const row of unusedRows) {
+    idle.set(row.file.fileName, { kind: "unused", wantedBy: row.wantedBy });
   }
   // How each zip maps onto GameBanana: its category, whether a newer
   // build exists, and the mod Name the artwork is fetched under.
@@ -250,13 +250,6 @@ export function App() {
     onSelect: setSelectedId,
   };
 
-  // Both reviews list files, not names; the finders deal in names.
-  const fileOf = (fileName: string) => index?.byFileName.get(fileName);
-  const orphanFiles = orphanNames.flatMap((f) => fileOf(f) ?? []);
-  const unusedRows: UnusedRow[] = unusedList.flatMap((row) => {
-    const file = fileOf(row.fileName);
-    return file ? [{ file, wantedBy: row.wantedBy }] : [];
-  });
   const runUpdate = (fileNames: string[]) => {
     updateMods.mutate(fileNames, {
       onSuccess: (result) => {
@@ -267,9 +260,11 @@ export function App() {
           toast.success(`updated ${result.updated.length} mods`);
           return;
         }
-        toast.error(
+        // Through notifyError, not toast.error: a batch where every
+        // row failed the same way should say so once.
+        notifyError(
           `updated ${result.updated.length}, ${result.failed.length} failed`,
-          { description: result.failed[0]?.error },
+          result.failed[0]?.error,
         );
       },
       onError: (error) => notifyError("couldn't update", error),
@@ -297,9 +292,9 @@ export function App() {
           toast.success(`moved ${label} to the trash`);
           return;
         }
-        toast.error(
+        notifyError(
           `trashed ${result.trashed.length}, couldn't remove ${result.failed.length}`,
-          { description: result.failed[0]?.error },
+          result.failed[0]?.error,
         );
       },
       onError: (error) => notifyError("couldn't remove", error),

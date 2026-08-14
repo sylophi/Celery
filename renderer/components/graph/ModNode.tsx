@@ -1,7 +1,7 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { StarIcon } from "lucide-react";
 import type { ModFile } from "@shared/schemas";
-import { IDLE_STYLE, type IdleKind } from "@/lib/idle";
+import { FINDING, type IdleKind } from "@/lib/findings";
 import { cn, displayName } from "@/lib/utils";
 
 export type ModNodeData = {
@@ -83,10 +83,10 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
         {data.idle !== undefined && (
           <span
             aria-hidden
-            title={IDLE_STYLE[data.idle].hint}
+            title={FINDING[data.idle].hint}
             className={cn(
               "size-1 shrink-0 rounded-full",
-              IDLE_STYLE[data.idle].dot,
+              FINDING[data.idle].dot,
             )}
           />
         )}
@@ -140,10 +140,10 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
         <span className="tabular truncate">{version}</span>
         {data.idle !== undefined && (
           <span
-            title={IDLE_STYLE[data.idle].hint}
-            className={cn("shrink-0", IDLE_STYLE[data.idle].text)}
+            title={FINDING[data.idle].hint}
+            className={cn("shrink-0", FINDING[data.idle].text)}
           >
-            {IDLE_STYLE[data.idle].label}
+            {FINDING[data.idle].label}
           </span>
         )}
         {data.missing > 0 && (

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { FINDING, type Finding } from "@/lib/findings";
 import { cn, dragRegion } from "@/lib/utils";
 
 // The app's chrome: which view you are in and the two global actions on
@@ -120,10 +121,10 @@ export function Toolbar({
   );
 }
 
-// A readout, not a control panel — except for the two counts that ask
-// something of you. Those are chips, and clicking one opens its review,
-// so the number and the thing you do about it are the same target. The
-// rest is text and looks like it.
+// A readout, not a control panel — except for the counts that ask
+// something of you. Those are chips wearing their finding's hue, and
+// clicking one opens its review, so the number and the thing you do
+// about it are the same target. The rest is text and looks like it.
 export function StatusBar({
   folder,
   total,
@@ -186,22 +187,13 @@ export function StatusBar({
   );
 }
 
-// Each chip wears its finding's hue, which is also the hue that
-// finding wears on every tile and row. Written out rather than
-// interpolated: Tailwind only sees class names it can read literally.
-const CHIP_TONE = {
-  update: "border-update/40 text-update hover:bg-update/10",
-  unused: "border-unused/40 text-unused hover:bg-unused/10",
-  orphan: "border-orphan/40 text-orphan hover:bg-orphan/10",
-} as const;
-
 function CountChip({
   tone,
   title,
   onClick,
   children,
 }: {
-  tone: keyof typeof CHIP_TONE;
+  tone: Finding;
   title: string;
   onClick: () => void;
   children: React.ReactNode;
@@ -213,7 +205,7 @@ function CountChip({
       title={title}
       className={cn(
         "tabular flex shrink-0 cursor-pointer items-center gap-1 rounded border px-1.5 py-px text-[10px] transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-        CHIP_TONE[tone],
+        FINDING[tone].chip,
       )}
     >
       {children}

@@ -194,10 +194,13 @@ export function planDisable(index: ModIndex, fileNames: string[]): DisablePlan {
 //
 // Both problems below are read off this one pass, and the difference
 // between them is only whether the pairing came back empty.
-function idleSupportMods(
-  index: ModIndex,
-): { file: string; wantedBy: string[] }[] {
-  const result: { file: string; wantedBy: string[] }[] = [];
+// Both finders hand back the files themselves, not their names: every
+// caller wants a size or a label off them, and the index they came from
+// is right here.
+type IdleSupportMod = { file: ModFile; wantedBy: string[] };
+
+function idleSupportMods(index: ModIndex): IdleSupportMod[] {
+  const result: IdleSupportMod[] = [];
   for (const file of index.files) {
     if (!file.enabled || file.favorite) continue;
     const supportish = file.tags.every(
@@ -209,25 +212,25 @@ function idleSupportMods(
       ...(index.optionalDependents.get(file.fileName) ?? []),
     ];
     if (referrers.some((r) => index.byFileName.get(r)?.enabled)) continue;
-    result.push({ file: file.fileName, wantedBy: referrers.toSorted() });
+    result.push({ file, wantedBy: referrers.toSorted() });
   }
-  return result.toSorted((a, b) => a.file.localeCompare(b.file));
+  return result.toSorted((a, b) =>
+    a.file.fileName.localeCompare(b.file.fileName),
+  );
 }
 
 // Orphans: nothing in the folder lists them as a dependency — not an
 // enabled mod, not a disabled one. Nothing is coming back for them, so
 // the answer is to delete them.
-export function findOrphans(index: ModIndex): string[] {
+export function findOrphans(index: ModIndex): ModFile[] {
   return idleSupportMods(index)
     .filter((entry) => entry.wantedBy.length === 0)
     .map((entry) => entry.file);
 }
 
-export type Unused = {
-  fileName: string;
-  // The installed mods that want it, all of them currently disabled.
-  wantedBy: string[];
-};
+// The mods that want it, all of them currently disabled — which is the
+// whole of what makes this unused rather than an orphan.
+export type Unused = IdleSupportMod;
 
 // Unused: mods DO ask for these, but every one of those mods is
 // disabled, so Everest is loading them for nobody. Deleting one would
@@ -235,7 +238,5 @@ export type Unused = {
 // nothing, because re-enabling any of them pulls this in again through
 // the hard-dep cascade. So the answer is to stop loading them.
 export function findUnused(index: ModIndex): Unused[] {
-  return idleSupportMods(index)
-    .filter((entry) => entry.wantedBy.length > 0)
-    .map((entry) => ({ fileName: entry.file, wantedBy: entry.wantedBy }));
+  return idleSupportMods(index).filter((entry) => entry.wantedBy.length > 0);
 }

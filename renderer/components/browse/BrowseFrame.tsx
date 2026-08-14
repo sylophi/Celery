@@ -6,7 +6,7 @@ import {
   type RefObject,
 } from "react";
 import type { ModIndex } from "@shared/graph";
-import type { IdleState } from "@/lib/idle";
+import type { IdleState } from "@/lib/findings";
 import type { ModFile, RemoteFileStatus } from "@shared/schemas";
 import { BrowseHeader } from "./BrowseHeader";
 import { BrowseSection } from "./Section";

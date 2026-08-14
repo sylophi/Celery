@@ -5,7 +5,7 @@ import { useSetFavorite } from "@/hooks/useMods";
 import { useOnScreen } from "@/hooks/useOnScreen";
 import { useRemoteModInfo } from "@/hooks/useRemote";
 import { ModIconGlyph } from "@/lib/modIcons";
-import { IDLE_STYLE, type IdleKind } from "@/lib/idle";
+import { FINDING, type IdleKind } from "@/lib/findings";
 import { cn, displayName } from "@/lib/utils";
 import {
   BrowseFrame,
@@ -74,26 +74,32 @@ function ModCard({
   const [broken, setBroken] = useState(false);
   const art = source !== undefined && !broken ? source : null;
 
-  // One badge, worst news first: a broken mod outranks a wasteful one,
-  // which outranks a merely out of date one. An unused mod sits below
-  // all of those — it is a note, and an update is the more useful thing
-  // to know about a mod that is otherwise fine.
-  const badge =
-    missing > 0 || file.parseError !== undefined
-      ? {
-          className: "bg-destructive",
-          title: file.parseError ?? `${missing} missing dependencies`,
-        }
-      : idle === "orphan"
-        ? { className: IDLE_STYLE.orphan.dot, title: IDLE_STYLE.orphan.hint }
-        : updateAvailable
-          ? { className: "bg-update", title: "update available" }
-          : idle === "unused"
-            ? {
-                className: IDLE_STYLE.unused.dot,
-                title: IDLE_STYLE.unused.hint,
-              }
-            : null;
+  // There is room for one badge, so they queue worst news first: a
+  // broken mod outranks a wasteful one, which outranks a merely out of
+  // date one. Unused comes last — it is a note, and an update is the
+  // more useful thing to know about a mod that is otherwise fine.
+  const badge = [
+    {
+      when: missing > 0 || file.parseError !== undefined,
+      className: "bg-destructive",
+      title: file.parseError ?? `${missing} missing dependencies`,
+    },
+    {
+      when: idle === "orphan",
+      className: FINDING.orphan.dot,
+      title: FINDING.orphan.hint,
+    },
+    {
+      when: updateAvailable,
+      className: FINDING.update.dot,
+      title: FINDING.update.hint,
+    },
+    {
+      when: idle === "unused",
+      className: FINDING.unused.dot,
+      title: FINDING.unused.hint,
+    },
+  ].find((candidate) => candidate.when);
 
   return (
     // The star is a sibling of the card button, since a button inside a

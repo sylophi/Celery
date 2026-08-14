@@ -2,10 +2,8 @@ import { useState } from "react";
 import {
   DownloadIcon,
   FolderIcon,
-  MoonIcon,
   PackageOpenIcon,
   StarIcon,
-  TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
 import type {
@@ -28,7 +26,7 @@ import {
   useUpdateMods,
 } from "@/hooks/useRemote";
 import { ModIconGlyph, TagIconGlyph, tagsBeyondCategory } from "@/lib/modIcons";
-import { IDLE_STYLE, type IdleState } from "@/lib/idle";
+import { FINDING, type IdleState } from "@/lib/findings";
 import { cn, displayName, formatBytes } from "@/lib/utils";
 
 // The panel sits over the graph (a canvas you pan anyway, and one the
@@ -438,17 +436,16 @@ function ModFacts({
           <span
             className={cn(
               "inline-flex items-center gap-1",
-              IDLE_STYLE[idle.kind].text,
+              FINDING[idle.kind].text,
             )}
           >
-            {/* A triangle would overstate the unused case: that mod is
-                doing nothing wrong, it is only asleep. */}
-            {idle.kind === "orphan" ? (
-              <TriangleAlertIcon aria-hidden className="size-3" />
-            ) : (
-              <MoonIcon aria-hidden className="size-3" />
-            )}
-            {IDLE_STYLE[idle.kind].label}
+            {/* Icon from the table too, so a new finding cannot
+                silently inherit this one's. */}
+            {(() => {
+              const Icon = FINDING[idle.kind].icon;
+              return <Icon aria-hidden className="size-3" />;
+            })()}
+            {FINDING[idle.kind].label}
           </span>
         )}
       </div>
