@@ -34,8 +34,10 @@ const PANEL_INSET = 312;
 
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 1.5;
-// The overview is dense enough that natural size is already the right
-// size; a focus view holds few nodes, so it may zoom right in.
+// A ceiling on the initial fit, not on the view: the overview is dense
+// enough that natural size is already the right size, while a focus view
+// holds few nodes so it may zoom right in. Scrolling takes the user past
+// either, up to MAX_ZOOM.
 const OVERVIEW_MAX_ZOOM = 1.2;
 
 // Cheap identity for a node set: enough to tell one rendered graph from
@@ -267,6 +269,9 @@ function GraphViewInner({
   ]);
 
   return (
+    // Wheel zooms at the cursor and drag pans, which is what React Flow
+    // already does by default: the graph used to pass panOnScroll, and
+    // that is what turned the wheel into a vertical pan.
     <ReactFlow
       nodes={nodes}
       edges={edges}
@@ -277,8 +282,6 @@ function GraphViewInner({
       onPaneClick={() => onSelect(null)}
       minZoom={MIN_ZOOM}
       maxZoom={MAX_ZOOM}
-      panOnScroll
-      zoomOnPinch
       proOptions={{ hideAttribution: true }}
       nodesDraggable={false}
       nodesConnectable={false}
