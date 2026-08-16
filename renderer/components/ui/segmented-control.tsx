@@ -39,11 +39,13 @@ export function SegmentedControl<T extends string>({
             "flex h-full cursor-pointer items-center gap-1.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
             md ? "px-3" : "px-2",
             i > 0 && "border-l border-border",
-            // The selected segment wears the accent gradient, unglowed:
-            // it says where you are, it is not the thing to press. The
-            // primary button keeps the glow to itself.
+            // The selected segment is a quiet wash of the accent: it
+            // says where you are, it is not the thing to press. Solid
+            // accent stays reserved for the primary button.
+            // More alpha over dark: a wash that reads on white sinks
+            // into the night canvas (the edge tokens' lesson).
             option.selected
-              ? "gradient-accent text-primary-foreground"
+              ? "bg-primary/15 text-foreground dark:bg-primary/30"
               : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
           )}
         >

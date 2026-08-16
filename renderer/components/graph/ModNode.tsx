@@ -18,9 +18,9 @@ export type ModNodeData = {
 };
 export type ModFlowNode = Node<ModNodeData, "mod">;
 
-// The one way a selected graph node lights up, shared by both node
+// The one way a selected graph node is marked, shared by both node
 // shapes here and by GhostNode.
-export const SELECTED_NODE = "border-ring shadow-glow ring-3 ring-ring/40";
+export const SELECTED_NODE = "border-ring ring-3 ring-ring/40";
 
 // Two node shapes: top-level mods are two-line cards, dependencies are
 // slim single-line pills. The layout reads these to size bands.

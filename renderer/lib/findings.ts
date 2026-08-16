@@ -13,12 +13,9 @@ import {
 // Tailwind class names are written out rather than interpolated: its
 // scanner only sees the ones it can read literally.
 //
-// Chips carry a wash of their own hue and give off a little of it. That
-// is the app's house effect, and a finding is exactly the kind of thing
-// it is for: the chip is a live control, and the glow is what separates
-// it from the dead text sitting beside it in the status bar. The glow
-// itself (shadow-glow-finding, a currentColor geometry) lives on the
-// CountChip in Toolbar.tsx, since it is the same for every hue.
+// Chips carry a wash of their own hue: the tinted fill and border are
+// what separate a live control from the dead text sitting beside it in
+// the status bar.
 export type Finding = "orphan" | "unused" | "update";
 
 export const FINDING: Record<

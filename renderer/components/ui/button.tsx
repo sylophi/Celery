@@ -8,11 +8,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // The one gradient control. Everything else in the app is flat,
-        // which is what lets the primary action carry a gradient and a
-        // glow without the screen turning into a light show.
-        default:
-          "gradient-accent text-primary-foreground shadow-glow hover:brightness-110 hover:saturate-125",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
         outline:
           "border-border bg-background/30 hover:border-ring/50 hover:bg-accent/70 hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground dark:border-input dark:bg-input/20 dark:hover:bg-input/40",
         secondary:

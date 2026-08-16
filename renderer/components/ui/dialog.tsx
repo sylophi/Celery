@@ -3,9 +3,7 @@ import { XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
-// Minimal modal shell: the page dims and blurs behind a glass panel,
-// capped by the aurora hairline so a modal is lit from the same edge
-// the toolbar is.
+// Minimal modal shell: the page dims and blurs behind a glass panel.
 export function Dialog({
   open,
   onClose,
@@ -53,7 +51,7 @@ export function Dialog({
         aria-label={title}
         data-popup=""
         className={cn(
-          "glass hairline-t relative w-full max-w-md rounded-xl border border-border p-4 text-sm text-popover-foreground shadow-floating",
+          "glass relative w-full max-w-md rounded-xl border border-border p-4 text-sm text-popover-foreground shadow-floating",
           className,
         )}
       >

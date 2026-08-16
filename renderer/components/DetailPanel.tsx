@@ -42,7 +42,7 @@ function panelClass(placement: PanelPlacement): string {
     // nothing but the sky behind it, where a plain wash reads the same
     // without a permanent backdrop-filter.
     placement === "floating"
-      ? "glass hairline-t absolute inset-y-3 right-3 z-40 w-72 rounded-xl border border-border shadow-floating"
+      ? "glass absolute inset-y-3 right-3 z-40 w-72 rounded-xl border border-border shadow-floating"
       : "h-full w-full border-l border-border bg-popover/85",
   );
 }

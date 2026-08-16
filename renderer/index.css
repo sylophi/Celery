@@ -46,8 +46,11 @@
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
-  /* Near-white in both themes: it only ever sits on the accent
-     gradient, which is mid-lightness either way. */
+  /* The triad as a solid, for the few things that act: the primary
+     button, the selection rail, a progress fill. Controls stay flat —
+     the gradients live in the sky and the chrome hairline, and putting
+     them on buttons too would cheapen both. */
+  --primary: oklch(0.52 0.2 292);
   --primary-foreground: oklch(0.99 0.008 290);
   --secondary: oklch(0.945 0.022 290);
   --secondary-foreground: oklch(0.3 0.07 288);
@@ -113,23 +116,9 @@
   --shadow-floating:
     0 10px 30px -10px color-mix(in oklab, var(--heart) 42%, transparent),
     0 2px 6px -2px oklch(0.3 0.06 288 / 0.12);
-  /* What a live control gives off: selection and the primary button.
-     One token, so nothing glows a little differently. (The status-bar
-     finding chips carry --shadow-glow-finding, a smaller currentColor
-     geometry, since they glow in their own hue.) */
-  --shadow-glow: 0 4px 16px -4px
-    color-mix(in oklab, var(--heart) 55%, transparent);
-
-  /* The two named gradients, kept here rather than spelled out per
-     component: the accent runs violet into blue on a diagonal, the
-     aurora runs the full triad across a hairline and fades out at both
-     ends. One-off decorative washes may still compose triad color
-     tokens (from-heart/15 and the like) at the call site. */
-  --gradient-accent: linear-gradient(
-    135deg in oklab,
-    var(--heart),
-    var(--crystal)
-  );
+  /* The app's one named gradient: the aurora ramp the chrome hairline
+     wears. Nothing else is a gradient — controls are flat, and the
+     atmosphere composes its blooms from the triad directly. */
   --gradient-aurora: linear-gradient(
     90deg,
     transparent 0%,
@@ -150,6 +139,9 @@
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
+  /* Lifted a step over light so it holds against the night canvas;
+     white text still clears 4.5:1. */
+  --primary: oklch(0.55 0.2 292);
   --secondary: oklch(0.3 0.05 288);
   --secondary-foreground: var(--foreground);
   --muted: oklch(0.29 0.045 288);
@@ -174,21 +166,9 @@
   --edge-optional: oklch(0.75 0.09 292 / 0.12);
   --edge-active: oklch(0.78 0.15 292);
 
-  /* Text needs the ramp lifted — the violet end disappears into the
-     night. Derived from the triad by raising lightness in place, so
-     retuning a triad hue carries through. (Light mode has no override;
-     the utility falls back to --gradient-accent.) */
-  --gradient-accent-text: linear-gradient(
-    135deg in oklab,
-    oklch(from var(--heart) 0.82 0.14 h),
-    oklch(from var(--crystal) 0.8 0.13 h)
-  );
-
   --shadow-floating:
     0 14px 36px -12px oklch(0.05 0.04 285 / 0.7),
     0 0 0 1px color-mix(in oklab, var(--heart) 26%, transparent);
-  --shadow-glow: 0 4px 20px -4px
-    color-mix(in oklab, var(--heart) 70%, transparent);
 }
 
 @theme inline {
@@ -199,6 +179,7 @@
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -226,10 +207,6 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --shadow-floating: var(--shadow-floating);
-  --shadow-glow: var(--shadow-glow);
-  /* The finding chips' glow: currentColor, so the one geometry serves
-     all three hues (each chip's text-* class supplies the colour). */
-  --shadow-glow-finding: 0 0 10px -3px currentColor;
 }
 
 @layer base {
@@ -402,15 +379,14 @@
 }
 
 /* The aurora hairline: a 1px rule that is the triad rather than a
-   border colour. On the chrome bars and section headers it REPLACES the
-   `border-b`/`border-t` it sits on; on bordered panels (dialog, the
-   floating detail panel) it is additive, lighting the top edge from
-   just inside the border.
+   border colour, REPLACING the `border-b`/`border-t` it sits on. Worn
+   by the toolbar and the status bar only — the two edges that frame
+   the workspace. It is the app's one decorative flourish on the
+   furniture, and it stays special by not being repeated inside.
 
    Painted as a background layer rather than a pseudo-element, so it
-   never has to claim `position` — which would fight `sticky` on the
-   section headers that wear it. It composes with `glass` and the
-   translucent washes because those only set a background *colour*. */
+   never has to claim `position`, and so it composes with the
+   translucent chrome washes, which only set a background *colour*. */
 @utility hairline-b {
   background-image: var(--gradient-aurora);
   background-repeat: no-repeat;
@@ -422,25 +398,6 @@
   background-repeat: no-repeat;
   background-size: 100% 1px;
   background-position: top;
-}
-
-/* The accent gradient as a fill, and as text. Named `gradient-*` rather
-   than `fill-*`, which is Tailwind's own SVG-fill namespace: `gradient-accent`
-   already means `fill: var(--color-accent)`. */
-@utility gradient-accent {
-  /* The gradient's own midpoint as a solid floor, so the surface stays
-     accent-coloured even where the image can't paint. */
-  background-color: color-mix(in oklab, var(--heart) 50%, var(--crystal));
-  background-image: var(--gradient-accent);
-}
-@utility gradient-accent-text {
-  /* Reads a token with a fallback rather than a `.dark &` override in
-     here: a nested dark rule inside @utility is flattened by the
-     compiler and ends up applying in both themes. Only .dark defines
-     the text ramp; light falls through to the plain accent. */
-  background-image: var(--gradient-accent-text, var(--gradient-accent));
-  background-clip: text;
-  color: transparent;
 }
 
 /* Shimmer bar for indeterminate progress (scan). Transform, not
