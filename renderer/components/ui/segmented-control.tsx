@@ -42,11 +42,11 @@ export function SegmentedControl<T extends string>({
             // The selected segment is a quiet wash of the accent: it
             // says where you are, it is not the thing to press. Solid
             // accent stays reserved for the primary button.
-            // A wash plus a 1px inset edge, so the selected segment has
-            // a boundary and not just a stain. More alpha over dark: a
-            // wash that reads on white sinks into the night canvas.
+            // The selected segment wears the control ramp, unsheened
+            // and unseated: same material as the primary button, but it
+            // states where you are rather than asking to be pressed.
             option.selected
-              ? "bg-primary/15 text-foreground ring-1 ring-primary/30 ring-inset dark:bg-primary/30 dark:ring-primary/45"
+              ? "gradient-control bg-primary text-primary-foreground"
               : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
           )}
         >

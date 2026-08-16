@@ -51,7 +51,7 @@ export function Dialog({
         aria-label={title}
         data-popup=""
         className={cn(
-          "glass relative w-full max-w-md rounded-xl border border-border p-4 text-sm text-popover-foreground shadow-floating",
+          "glass hairline-t relative w-full max-w-md rounded-xl border border-border p-4 text-sm text-popover-foreground shadow-floating",
           className,
         )}
       >

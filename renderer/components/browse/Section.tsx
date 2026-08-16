@@ -26,7 +26,7 @@ export function BrowseSection({
           use px-4) and paints opaque: a translucent header lets the rows
           passing under it smear through, and a blurred one makes every
           scroll frame re-filter the tiles beneath it. */}
-      <div className="sticky top-0 z-10 -mx-4 mb-2 flex items-baseline gap-2 border-b border-border bg-background px-4 py-1.5">
+      <div className="sticky top-0 z-10 -mx-4 mb-2 flex items-baseline gap-2 bg-background hairline-b px-4 py-1.5">
         <h2 className="text-[11px] font-semibold tracking-wide text-foreground uppercase">
           {label}
         </h2>

@@ -139,33 +139,41 @@
     color-mix(in oklab, var(--beyond) 45%, transparent) 78%,
     transparent 100%
   );
-  /* A raised control's fill: the accent lit from above, drifting a few
-     degrees warmer at the top and cooler at the bottom, so the button
-     reads as an object under the sky rather than a painted rectangle. */
+  /* A raised control's fill: heart into crystal on the diagonal, lit
+     from the top-left — the lighter violet end is where the light
+     falls, the deeper blue end is in its own shade. Hue travel AND a
+     light direction, which is what v1's flat 135deg lerp had neither
+     of. */
   --gradient-control: linear-gradient(
-    to bottom in oklch,
-    oklch(from var(--primary) calc(l + 0.06) c calc(h + 6)),
-    oklch(from var(--primary) calc(l - 0.04) c calc(h - 8))
+    135deg in oklch,
+    oklch(from var(--heart) calc(l + 0.04) c h),
+    oklch(from var(--crystal) calc(l - 0.02) c h)
   );
   /* The accent ramp for linear tracks (progress, the selection rail):
-     heart to crystal through indigo, horizontal and vertical. */
+     the whole triad — a kiss of beyond, then heart into crystal
+     through indigo. The same sweep as the hairline, so every accent
+     gradient in the app is one aurora at different sizes. */
   --gradient-accent-x: linear-gradient(
     to right in oklch,
-    var(--heart),
+    var(--beyond),
+    var(--heart) 45%,
     var(--crystal)
   );
   --gradient-accent-y: linear-gradient(
     to bottom in oklch,
-    var(--heart),
+    var(--beyond),
+    var(--heart) 45%,
     var(--crystal)
   );
-  /* Ink for display text (the wordmark): the foreground fading toward
-     the heart at the baseline. Close enough to solid that it reads as
-     type first, alive second. */
+  /* Ink for display text (the wordmark, the onboarding line): the same
+     triad sweep, its stops pinned to one lightness so the type reads
+     evenly against the dawn. Dark overrides it with a lifted copy —
+     the raw ramp disappears into the night. */
   --gradient-ink: linear-gradient(
-    to bottom,
-    var(--foreground),
-    color-mix(in oklab, var(--foreground) 70%, var(--heart))
+    to right in oklch,
+    oklch(from var(--beyond) 0.54 0.17 h),
+    oklch(from var(--heart) 0.54 0.19 h) 45%,
+    oklch(from var(--crystal) 0.54 0.16 h)
   );
   /* The sheen and seat of a raised control: 1px of light along the top
      edge, a tight shadow underneath. Composes with Tailwind's ring
@@ -224,6 +232,13 @@
     inset 0 1px 0 oklch(1 0 0 / 0.25), 0 1px 2px oklch(0 0 0 / 0.5);
   --shadow-lift: 0 6px 16px -8px
     color-mix(in oklab, var(--heart) 80%, transparent);
+  /* The ink ramp lifted for the night, hue for hue. */
+  --gradient-ink: linear-gradient(
+    to right in oklch,
+    oklch(from var(--beyond) 0.8 0.14 h),
+    oklch(from var(--heart) 0.82 0.14 h) 45%,
+    oklch(from var(--crystal) 0.8 0.13 h)
+  );
 }
 
 @theme inline {
@@ -447,13 +462,14 @@
 }
 
 /* The aurora hairline: a 1px rule that is the triad rather than a
-   border colour, REPLACING the `border-b`/`border-t` it sits on. Worn
-   by the toolbar and the status bar only — the two edges that frame
-   the workspace. It is the app's one decorative flourish on the
-   furniture, and it stays special by not being repeated inside.
+   border colour. On the chrome bars and the sticky section headers it
+   REPLACES the `border-b`/`border-t` it sits on; on the glass panels
+   (dialog, floating detail panel) it is additive, lighting the top
+   edge from just inside the border.
 
    Painted as a background layer rather than a pseudo-element, so it
-   never has to claim `position`, and so it composes with the
+   never has to claim `position` — which would fight `sticky` on the
+   section headers — and so it composes with `glass` and the
    translucent chrome washes, which only set a background *colour*. */
 @utility hairline-b {
   background-image: var(--gradient-aurora);

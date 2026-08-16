@@ -122,9 +122,12 @@ function ModCard({
       >
         <span
           className={cn(
-            // The artwork is shown as-is: no tint or scrim over it. The
-            // sky around the tiles is what seats them into the app.
             "relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted/50 ring-1 transition-all",
+            // A breath of the sky over the artwork — heart rising from
+            // the ground, crystal at the top — which seats 150
+            // unrelated screenshots into one app. A pseudo-element so
+            // the grid carries no extra DOM per tile.
+            "after:absolute after:inset-0 after:bg-gradient-to-t after:from-heart/20 after:via-transparent after:to-crystal/10 after:content-['']",
             selected ? "ring-2 ring-ring" : "ring-border",
             // Disabled mods keep their art but stop competing for
             // attention with the ones actually being loaded.
