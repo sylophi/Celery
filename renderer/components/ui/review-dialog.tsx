@@ -85,7 +85,7 @@ export function ReviewDialog<T>({
                         return next;
                       })
                     }
-                    className="size-3 shrink-0 accent-[var(--ring)]"
+                    className="size-3 shrink-0 accent-ring"
                   />
                   <span
                     className={cn(

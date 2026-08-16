@@ -4,19 +4,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform,opacity] outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         // A raised key: top-lit accent fill, 1px sheen, seated by a
-        // tight shadow (see the effects block in index.css). bg-primary
-        // stays underneath as the floor the gradient sits on.
+        // tight shadow. Both halves live in index.css's utility layer.
         default:
-          "gradient-control bg-primary text-primary-foreground shadow-control hover:brightness-105 active:brightness-95",
+          "gradient-control text-primary-foreground shadow-control hover:brightness-105 active:brightness-95",
         outline:
           "border-border bg-background/30 hover:border-ring/50 hover:bg-accent/70 hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground dark:border-input dark:bg-input/20 dark:hover:bg-input/40",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
           "hover:bg-accent/70 hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground",
         destructive:

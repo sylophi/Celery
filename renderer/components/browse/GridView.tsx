@@ -122,7 +122,7 @@ function ModCard({
       >
         <span
           className={cn(
-            "relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted/50 ring-1 transition-all",
+            "relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted/50 ring-1 transition-[box-shadow,opacity,filter]",
             // A breath of the sky rising over the artwork: it seats 150
             // unrelated screenshots into one app. A pseudo-element, not
             // a child span, so the grid carries no extra DOM per tile.
@@ -155,7 +155,7 @@ function ModCard({
             // Only worth a chip once there is art to label; without it
             // the glyph already fills the tile.
             <span
-              className="absolute bottom-1 left-1 grid size-5 place-items-center rounded-md bg-background/75 backdrop-blur-sm"
+              className="absolute bottom-1 left-1 grid size-5 place-items-center rounded-md bg-background/85"
               {...(remote?.category !== undefined
                 ? { title: remote.category }
                 : {})}
@@ -198,7 +198,10 @@ function ModCard({
           })
         }
         className={cn(
-          "absolute top-2.5 left-2.5 cursor-pointer rounded bg-background/70 p-1 backdrop-blur-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          // No backdrop blur on these two: the sky behind the app never
+          // stops moving, so ~100 tiny blur regions would re-filter every
+          // frame. A stronger wash reads the same at chip size.
+          "absolute top-2.5 left-2.5 cursor-pointer rounded bg-background/85 p-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
           file.favorite
             ? "text-foreground"
             : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100",

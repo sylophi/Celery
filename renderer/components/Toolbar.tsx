@@ -45,9 +45,8 @@ export function Toolbar({
       data-titlebar
       // A translucent wash over the sky (no blur: nothing but the
       // atmosphere is ever behind this bar), closed off by the aurora
-      // hairline instead of a border — the bar's bottom edge is the
-      // app's one full statement of the triad, and everything below
-      // borrows pieces of it.
+      // hairline instead of a border. Where the hairline appears is
+      // documented on the utility in index.css.
       className="z-40 flex h-(--toolbar-height) shrink-0 items-center gap-2.5 bg-background/70 hairline-b"
       style={dragRegion("drag")}
     >

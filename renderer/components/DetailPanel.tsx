@@ -37,13 +37,13 @@ export type PanelPlacement = "floating" | "docked";
 function panelClass(placement: PanelPlacement): string {
   return cn(
     "flex flex-col overflow-hidden text-popover-foreground",
-    // Only the floating panel is glass: it overlaps the graph, so the
-    // blur earns its keep. The docked panel sits beside the views with
-    // nothing but the sky behind it, where a plain wash reads the same
-    // without a permanent backdrop-filter.
+    // No glass on either placement: the docked panel has only the sky
+    // behind it, and the floating one sits over the live graph canvas,
+    // where a blur would re-run on every pan/zoom frame (the minimap's
+    // lesson, at 10x the area).
     placement === "floating"
-      ? "glass hairline-t absolute inset-y-3 right-3 z-40 w-72 rounded-xl border border-border shadow-floating"
-      : "h-full w-full border-l border-border bg-popover/85",
+      ? "hairline-t absolute inset-y-3 right-3 z-40 w-72 rounded-xl border border-border bg-popover/90 shadow-floating"
+      : "h-full w-full border-l border-border bg-popover/90",
   );
 }
 

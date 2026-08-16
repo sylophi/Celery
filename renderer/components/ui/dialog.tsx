@@ -38,7 +38,10 @@ export function Dialog({
   return (
     <div
       role="presentation"
-      className="fixed inset-0 isolate z-50 flex items-start justify-center bg-background/50 p-4 pt-[12vh] backdrop-blur-[3px]"
+      // The scrim dims but does not blur: a viewport-wide backdrop-filter
+      // would re-run on every aurora frame for as long as the dialog is
+      // open, and under the panel's own glass it is invisible anyway.
+      className="fixed inset-0 isolate z-50 flex items-start justify-center bg-background/60 p-4 pt-[12vh]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

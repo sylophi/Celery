@@ -26,7 +26,7 @@
      --heart    the crystal heart's violet, the app's own colour
      --beyond   Badeline's magenta, the hue past the top of the mountain
 
-   Every gradient, glow and tint below is those three and nothing else,
+   Every gradient and tint below is those three and nothing else,
    which is what keeps a purple app from turning into a pile of
    unrelated purples. Neutrals are not grey either: they carry a few
    points of the same violet chroma, so a "grey" border reads as part
@@ -46,13 +46,10 @@
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
-  /* The accent, for the few things that act: the primary button, the
-     selection rail, a progress fill. Its effects are built in the
-     effects block below — lit from above, never haloed. */
+  /* The floor under the raised-key button fill (gradient-control),
+     and the solid the button reads as where its gradient can't paint. */
   --primary: oklch(0.52 0.2 292);
   --primary-foreground: oklch(0.99 0.008 290);
-  --secondary: oklch(0.945 0.022 290);
-  --secondary-foreground: oklch(0.3 0.07 288);
   --muted: oklch(0.945 0.022 290);
   --muted-foreground: oklch(0.52 0.045 288);
   --accent: oklch(0.93 0.034 292);
@@ -111,13 +108,16 @@
 
   /* Floating-panel elevation, shared by every floating surface so they
      all cast the same shadow — tinted with --heart rather than black,
-     so shadows belong to the sky too. */
+     so shadows belong to the sky too. The onboarding card borrows it
+     as hover elevation. */
   --shadow-floating:
     0 10px 30px -10px color-mix(in oklab, var(--heart) 42%, transparent),
     0 2px 6px -2px oklch(0.3 0.06 288 / 0.12);
   /* The two named gradients: the accent runs violet into blue on a
      diagonal (fills, text, rails), the aurora runs the full triad
-     across the chrome hairline and fades out at both ends. Nothing
+     across the chrome hairline and fades out at both ends. One-off
+     decorative washes (the tile veil, the graph regions) compose triad
+     color tokens at the call site instead of naming a third. Nothing
      emits a halo — the gradients themselves are the emphasis. */
   --gradient-accent: linear-gradient(
     135deg in oklab,
@@ -158,8 +158,6 @@
   /* Lifted a step over light so it holds against the night canvas;
      white text still clears 4.5:1. */
   --primary: oklch(0.55 0.2 292);
-  --secondary: oklch(0.3 0.05 288);
-  --secondary-foreground: var(--foreground);
   --muted: oklch(0.29 0.045 288);
   --muted-foreground: oklch(0.72 0.035 288);
   --accent: oklch(0.33 0.06 290);
@@ -209,8 +207,6 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -232,7 +228,6 @@
   --radius-2xl: calc(var(--radius) * 1.8);
 
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --shadow-floating: var(--shadow-floating);
   --shadow-control: var(--shadow-control);
@@ -315,10 +310,11 @@
 .atmosphere-aurora {
   position: absolute;
   /* Bled just past every edge so the blooms' soft ends never show a
-     seam while they drift: the drift peaks at ~3% of the viewport and
-     the compositor rasterizes this whole layer, so the bleed stays as
-     small as the animation allows. */
-  inset: -8%;
+     seam while they drift: the translate peaks at ~2.5% of the viewport
+     (the scale-up end covers its own edges), and the compositor
+     rasterizes this whole layer, so the bleed stays as small as the
+     animation allows. */
+  inset: -3%;
   background-image:
     radial-gradient(38% 42% at 20% 14%, var(--aurora-1) 0%, transparent 72%),
     radial-gradient(42% 38% at 84% 24%, var(--aurora-2) 0%, transparent 72%),
@@ -395,13 +391,12 @@
    --------------------------------------------------------------------- */
 
 /* Glass: a surface that lets the sky through, blurred so the text on it
-   still reads. Reserved for surfaces that overlap CONTENT (dialogs,
-   toasts, the floating detail panel): backdrop-filter re-runs whenever
-   anything behind changes, and the atmosphere is always animating, so a
-   permanent glass surface would keep the GPU busy in an idle app.
-   Surfaces whose backdrop is only the sky (chrome bars, docked panel)
-   use a plain translucent wash instead — blurring a soft gradient looks
-   the same as not blurring it. */
+   still reads. Reserved for TRANSIENT surfaces over content (dialogs,
+   toasts): backdrop-filter re-runs whenever anything behind changes,
+   and the atmosphere is always animating, so a persistent glass
+   surface would keep the GPU busy in an idle app. Everything else —
+   chrome bars, the detail panel, the minimap — uses a plain
+   translucent wash instead. */
 @utility glass {
   background-color: color-mix(in oklab, var(--popover) 82%, transparent);
   backdrop-filter: blur(20px) saturate(1.4);
@@ -448,6 +443,9 @@
   color: transparent;
 }
 @utility gradient-control {
+  /* Like gradient-accent: its own floor, so the utility is
+     self-sufficient. */
+  background-color: var(--primary);
   background-image: var(--gradient-control);
 }
 
@@ -530,8 +528,10 @@
 .react-flow__minimap {
   @apply overflow-hidden rounded-lg border border-border;
   /* No glass: its backdrop is the live canvas, so blur would re-run on
-     every pan/zoom frame. A near-opaque wash reads the same. */
-  background-color: color-mix(in oklab, var(--popover) 92%, transparent);
+     every pan/zoom frame. Mixed toward --background rather than
+     transparent: same colour, but opaque, so the canvas beneath it is
+     culled instead of blended. */
+  background-color: color-mix(in oklab, var(--popover) 92%, var(--background));
 }
 .react-flow__minimap-mask {
   fill: oklch(0.25 0.06 288 / 0.1);
