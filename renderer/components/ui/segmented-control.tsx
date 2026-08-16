@@ -42,11 +42,11 @@ export function SegmentedControl<T extends string>({
             // The selected segment is a quiet wash of the accent: it
             // says where you are, it is not the thing to press. Solid
             // accent stays reserved for the primary button.
-            // The selected segment wears the control ramp, unsheened
-            // and unseated: same material as the primary button, but it
-            // states where you are rather than asking to be pressed.
+            // The selected segment wears the accent gradient flat — the
+            // raised-key treatment stays reserved for the button that
+            // acts.
             option.selected
-              ? "gradient-control bg-primary text-primary-foreground"
+              ? "gradient-accent text-primary-foreground"
               : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
           )}
         >

@@ -111,23 +111,22 @@ function ModCard({
         aria-label={`select ${name}`}
         aria-pressed={selected}
         className={cn(
-          // Tiles lift toward you on hover, and the picked one stays
-          // lifted: shadow-lift is a grounded tinted shadow, so a
-          // raised tile casts onto the sky instead of glowing at it.
+          // Tiles lift toward you on hover. Cheap to animate (transform
+          // + background only) and it is what turns a flat grid of
+          // screenshots into a shelf.
           "flex w-full cursor-pointer flex-col gap-1.5 rounded-xl p-1.5 outline-none",
-          "transition-[transform,background-color,box-shadow] duration-150 ease-out-quart",
-          "hover:-translate-y-0.5 hover:bg-accent/70 hover:shadow-lift focus-visible:ring-3 focus-visible:ring-ring/50",
-          selected && "bg-accent shadow-lift",
+          "transition-[transform,background-color] duration-150 ease-out-quart",
+          "hover:-translate-y-0.5 hover:bg-accent/70 focus-visible:ring-3 focus-visible:ring-ring/50",
+          selected && "bg-accent",
         )}
       >
         <span
           className={cn(
             "relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted/50 ring-1 transition-all",
-            // A breath of the sky over the artwork — heart rising from
-            // the ground, crystal at the top — which seats 150
-            // unrelated screenshots into one app. A pseudo-element so
-            // the grid carries no extra DOM per tile.
-            "after:absolute after:inset-0 after:bg-gradient-to-t after:from-heart/20 after:via-transparent after:to-crystal/10 after:content-['']",
+            // A breath of the sky rising over the artwork: it seats 150
+            // unrelated screenshots into one app. A pseudo-element, not
+            // a child span, so the grid carries no extra DOM per tile.
+            "after:absolute after:inset-0 after:bg-gradient-to-t after:from-heart/15 after:to-60% after:content-['']",
             selected ? "ring-2 ring-ring" : "ring-border",
             // Disabled mods keep their art but stop competing for
             // attention with the ones actually being loaded.

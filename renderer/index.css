@@ -115,22 +115,15 @@
   --shadow-floating:
     0 10px 30px -10px color-mix(in oklab, var(--heart) 42%, transparent),
     0 2px 6px -2px oklch(0.3 0.06 288 / 0.12);
-  /* -------------------------------------------------------------------
-     Effects. Every one obeys three rules that keep them from reading
-     as decoration bolted on afterwards:
-
-     - One light source, above. Raised controls are lighter at the top
-       and carry a 1px sheen; nothing is lit from below or from inside.
-     - Gradients travel the hue wheel, in oklch. The short arc from
-       violet to blue passes through indigo at full chroma; a naive
-       oklab lerp greys out in the middle, which is what made v1 look
-       cheap.
-     - Nothing emits a halo. Emphasis is elevation: a grounded, tinted
-       shadow below the element, not light radiating from it.
-     ------------------------------------------------------------------- */
-
-  /* The aurora ramp the chrome hairline wears: the full triad across
-     1px, faded out at both ends. */
+  /* The two named gradients: the accent runs violet into blue on a
+     diagonal (fills, text, rails), the aurora runs the full triad
+     across the chrome hairline and fades out at both ends. Nothing
+     emits a halo — the gradients themselves are the emphasis. */
+  --gradient-accent: linear-gradient(
+    135deg in oklab,
+    var(--heart),
+    var(--crystal)
+  );
   --gradient-aurora: linear-gradient(
     90deg,
     transparent 0%,
@@ -139,51 +132,17 @@
     color-mix(in oklab, var(--beyond) 45%, transparent) 78%,
     transparent 100%
   );
-  /* A raised control's fill: heart into crystal on the diagonal, lit
-     from the top-left — the lighter violet end is where the light
-     falls, the deeper blue end is in its own shade. Hue travel AND a
-     light direction, which is what v1's flat 135deg lerp had neither
-     of. */
+  /* The primary button alone gets a built fill: the accent lit from
+     the top-left, with a 1px sheen and a tight seating shadow, so the
+     one control that acts reads as a raised key rather than a painted
+     rectangle. */
   --gradient-control: linear-gradient(
     135deg in oklch,
     oklch(from var(--heart) calc(l + 0.04) c h),
     oklch(from var(--crystal) calc(l - 0.02) c h)
   );
-  /* The accent ramp for linear tracks (progress, the selection rail):
-     the whole triad — a kiss of beyond, then heart into crystal
-     through indigo. The same sweep as the hairline, so every accent
-     gradient in the app is one aurora at different sizes. */
-  --gradient-accent-x: linear-gradient(
-    to right in oklch,
-    var(--beyond),
-    var(--heart) 45%,
-    var(--crystal)
-  );
-  --gradient-accent-y: linear-gradient(
-    to bottom in oklch,
-    var(--beyond),
-    var(--heart) 45%,
-    var(--crystal)
-  );
-  /* Ink for display text (the wordmark, the onboarding line): the same
-     triad sweep, its stops pinned to one lightness so the type reads
-     evenly against the dawn. Dark overrides it with a lifted copy —
-     the raw ramp disappears into the night. */
-  --gradient-ink: linear-gradient(
-    to right in oklch,
-    oklch(from var(--beyond) 0.54 0.17 h),
-    oklch(from var(--heart) 0.54 0.19 h) 45%,
-    oklch(from var(--crystal) 0.54 0.16 h)
-  );
-  /* The sheen and seat of a raised control: 1px of light along the top
-     edge, a tight shadow underneath. Composes with Tailwind's ring
-     stack, so focus rings still work on top. */
   --shadow-control:
     inset 0 1px 0 oklch(1 0 0 / 0.22), 0 1px 2px oklch(0.2 0.08 292 / 0.35);
-  /* Elevation for the selected thing: grounded below the element and
-     tinted with the heart, not a halo around it. */
-  --shadow-lift: 0 6px 16px -8px
-    color-mix(in oklab, var(--heart) 65%, transparent);
 }
 
 .dark {
@@ -226,17 +185,16 @@
   --shadow-floating:
     0 14px 36px -12px oklch(0.05 0.04 285 / 0.7),
     0 0 0 1px color-mix(in oklab, var(--heart) 26%, transparent);
-  /* Night needs a darker seat under raised controls, and the lift can
-     carry more of the heart before it reads as a glow. */
+  /* Night needs a darker seat under the raised button. */
   --shadow-control:
     inset 0 1px 0 oklch(1 0 0 / 0.25), 0 1px 2px oklch(0 0 0 / 0.5);
-  --shadow-lift: 0 6px 16px -8px
-    color-mix(in oklab, var(--heart) 80%, transparent);
-  /* The ink ramp lifted for the night, hue for hue. */
-  --gradient-ink: linear-gradient(
-    to right in oklch,
-    oklch(from var(--beyond) 0.8 0.14 h),
-    oklch(from var(--heart) 0.82 0.14 h) 45%,
+  /* Text needs the accent ramp lifted — the violet end disappears into
+     the night. Derived hue-for-hue from the triad, so retuning it
+     carries through. (Light has no override; the text utility falls
+     back to --gradient-accent.) */
+  --gradient-accent-text: linear-gradient(
+    135deg in oklab,
+    oklch(from var(--heart) 0.82 0.14 h),
     oklch(from var(--crystal) 0.8 0.13 h)
   );
 }
@@ -278,7 +236,6 @@
 
   --shadow-floating: var(--shadow-floating);
   --shadow-control: var(--shadow-control);
-  --shadow-lift: var(--shadow-lift);
 }
 
 @layer base {
@@ -394,17 +351,6 @@
   animation: twinkle 7s ease-in-out infinite alternate;
 }
 
-/* Film grain over the blooms: soft wide gradients band visibly on
-   8-bit displays, and a whisper of static noise is what hides it.
-   One repeated SVG-turbulence tile, no animation. */
-.atmosphere-grain {
-  position: absolute;
-  inset: 0;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 160px 160px;
-}
-
 /* The far field: smaller tile, dimmer, twinkling on its own clock and
    fading the opposite way. */
 .atmosphere-stars-far {
@@ -484,20 +430,25 @@
   background-position: top;
 }
 
-/* The effect gradients as utilities. */
-@utility gradient-control {
-  background-image: var(--gradient-control);
+/* The effect gradients as utilities. `gradient-*` rather than
+   `fill-*`, which is Tailwind's own SVG-fill namespace. */
+@utility gradient-accent {
+  /* The gradient's own midpoint as a solid floor, so the surface stays
+     accent-coloured even where the image can't paint. */
+  background-color: color-mix(in oklab, var(--heart) 50%, var(--crystal));
+  background-image: var(--gradient-accent);
 }
-@utility gradient-accent-x {
-  background-image: var(--gradient-accent-x);
-}
-@utility gradient-accent-y {
-  background-image: var(--gradient-accent-y);
-}
-@utility gradient-ink-text {
-  background-image: var(--gradient-ink);
+@utility gradient-accent-text {
+  /* Reads a token with a fallback rather than a `.dark &` override in
+     here: a nested dark rule inside @utility is flattened by the
+     compiler and ends up applying in both themes. Only .dark defines
+     the text ramp; light falls through to the plain accent. */
+  background-image: var(--gradient-accent-text, var(--gradient-accent));
   background-clip: text;
   color: transparent;
+}
+@utility gradient-control {
+  background-image: var(--gradient-control);
 }
 
 /* Shimmer bar for indeterminate progress (scan). Transform, not
