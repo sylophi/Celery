@@ -126,7 +126,7 @@ function ModCard({
             // A breath of the sky rising over the artwork: it seats 150
             // unrelated screenshots into one app. A pseudo-element, not
             // a child span, so the grid carries no extra DOM per tile.
-            "after:absolute after:inset-0 after:bg-gradient-to-t after:from-heart/15 after:to-60% after:content-['']",
+            "after:pointer-events-none after:absolute after:inset-0 after:bg-gradient-to-t after:from-heart/15 after:to-60% after:content-['']",
             selected ? "ring-2 ring-ring" : "ring-border",
             // Disabled mods keep their art but stop competing for
             // attention with the ones actually being loaded.
@@ -155,7 +155,9 @@ function ModCard({
             // Only worth a chip once there is art to label; without it
             // the glyph already fills the tile.
             <span
-              className="absolute bottom-1 left-1 grid size-5 place-items-center rounded-md bg-background/85"
+              // z-10 lifts the chip (and its title tooltip's hit area) above
+              // the veil pseudo-element, which paints after it in tree order.
+              className="absolute bottom-1 left-1 z-10 grid size-5 place-items-center rounded-md bg-background/85"
               {...(remote?.category !== undefined
                 ? { title: remote.category }
                 : {})}

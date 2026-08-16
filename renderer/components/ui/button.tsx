@@ -10,6 +10,9 @@ const buttonVariants = cva(
       variant: {
         // A raised key: top-lit accent fill, 1px sheen, seated by a
         // tight shadow. Both halves live in index.css's utility layer.
+        // The hover brightness applies unanimated on purpose: the base
+        // transition list omits `filter`, so the button never holds a
+        // re-rasterizing filter animation on hover.
         default:
           "gradient-control text-primary-foreground shadow-control hover:brightness-105 active:brightness-95",
         outline:

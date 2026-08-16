@@ -329,7 +329,10 @@
      nothing there, not faded to zero and left animating. */
   display: none;
   /* Each field twinkles between its own bounds, out of phase with the
-     other, so the sky never pulses as one. */
+     other, so the sky never pulses as one. The static opacity is the
+     resting state reduced-motion falls back to when the keyframes (which
+     otherwise override it) are switched off. */
+  opacity: 0.6;
   --twinkle-from: 0.35;
   --twinkle-to: 0.9;
   /* One tile of sky, repeated. Sizes vary per star so the field has
@@ -351,6 +354,7 @@
    fading the opposite way. */
 .atmosphere-stars-far {
   background-size: 270px 230px;
+  opacity: 0.25;
   --twinkle-from: 0.4;
   --twinkle-to: 0.15;
   animation-duration: 11s;
@@ -374,14 +378,6 @@
   }
   to {
     opacity: var(--twinkle-to);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .atmosphere-aurora,
-  .atmosphere-stars,
-  .loader-shimmer {
-    animation: none;
   }
 }
 
@@ -464,6 +460,23 @@
   animation: loader-shimmer 1.4s var(--ease-out-quart) infinite;
 }
 
+/* Kill every animation the theme runs. Placed AFTER the rules it
+   overrides: it ties on specificity, so it must win on order. The
+   shimmer also widens to a quiet full-track fill — frozen at a third
+   it would read as determinate progress stuck at 33%. */
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere-aurora,
+  .atmosphere-stars,
+  .loader-shimmer,
+  .animate-pulse {
+    animation: none;
+  }
+  .loader-shimmer {
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+
 /* The one rule that knows about native window buttons.
 
    Both platforms overlay theirs on the app's toolbar, just at opposite
@@ -491,6 +504,10 @@
      which for a full-width bar is the window — the same thing the
      overlay measures against. */
   --chrome-inset-end: calc(100% - env(titlebar-area-width, calc(100% - 140px)));
+  /* Windows paints its caption-button strip as an opaque block of
+     CHROME_COLORS over this same row, so the bar goes opaque there —
+     a translucent wash would show a seam where the overlay begins. */
+  background-color: var(--background);
 }
 
 /* React Flow chrome, retinted to the token system. The graph pane is

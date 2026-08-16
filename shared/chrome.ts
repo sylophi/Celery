@@ -33,6 +33,6 @@ export const TRAFFIC_LIGHT_INSET =
 // them so resize flashes blend in, and Windows tints its caption
 // buttons with them. Retune together with the tokens.
 export const CHROME_COLORS = {
-  light: { background: "#f6f5ff", foreground: "#1d1b38" },
+  light: { background: "#f3f1ff", foreground: "#1d1b38" },
   dark: { background: "#111023", foreground: "#f1f0fb" },
 } as const;
