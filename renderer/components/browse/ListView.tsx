@@ -62,7 +62,12 @@ function ModRow({
     <li
       className={cn(
         "group relative flex h-8 items-center gap-2.5 rounded-md px-2 transition-colors",
-        selected ? "bg-accent" : "hover:bg-accent",
+        // A rail rather than a glow: at 32px a row, a hundred of them
+        // stacked, anything that spills past its own edge turns the
+        // list into a smear.
+        selected
+          ? "bg-accent before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:content-[''] before:gradient-accent"
+          : "hover:bg-accent/70",
       )}
     >
       <button

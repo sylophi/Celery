@@ -339,7 +339,9 @@ export function App() {
   };
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+    // No background of its own: the atmosphere behind the app is what
+    // fills the gaps between its surfaces.
+    <div className="flex h-dvh flex-col overflow-hidden text-foreground">
       {folder ? (
         <>
           <Toolbar
@@ -484,7 +486,7 @@ function ScanProgress() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3">
       <div className="relative h-1 w-56 overflow-hidden rounded-full bg-muted/40">
-        <div className="loader-shimmer absolute inset-y-0 h-full w-1/3 rounded-full bg-foreground/40" />
+        <div className="loader-shimmer absolute inset-y-0 left-0 h-full w-1/3 rounded-full gradient-accent" />
       </div>
       <p className="text-xs text-muted-foreground">reading mod manifests</p>
     </div>
@@ -512,10 +514,10 @@ function Onboarding({ onPicked }: { onPicked: () => void }) {
         type="button"
         disabled={busy}
         onClick={() => void pick()}
-        className="group flex h-64 w-full max-w-md cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border text-center transition-all duration-150 outline-none hover:border-foreground/40 hover:bg-muted/30 focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+        className="group flex h-64 w-full max-w-md cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-popover/70 text-center transition-[transform,border-color,box-shadow] duration-150 outline-none hover:-translate-y-0.5 hover:border-ring/60 hover:shadow-floating focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
       >
-        <FolderOpenIcon className="size-5 text-muted-foreground transition-colors group-hover:text-foreground" />
-        <div className="text-sm font-medium">
+        <FolderOpenIcon className="size-5 text-muted-foreground transition-colors group-hover:text-ring" />
+        <div className="gradient-accent-text text-sm font-medium">
           point Celery at your Mods folder
         </div>
         <p className="max-w-xs text-xs text-muted-foreground">

@@ -23,7 +23,8 @@ export function ProgressBar({
     >
       <div
         className={cn(
-          "h-full rounded-full bg-primary transition-[width] duration-200",
+          // No glow: the track's overflow-hidden would clip it anyway.
+          "gradient-accent h-full rounded-full transition-[width] duration-200",
           pct === null && "animate-pulse",
         )}
         style={{ width: `${pct ?? 100}%` }}

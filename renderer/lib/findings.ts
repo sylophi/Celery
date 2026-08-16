@@ -12,6 +12,13 @@ import {
 //
 // Tailwind class names are written out rather than interpolated: its
 // scanner only sees the ones it can read literally.
+//
+// Chips carry a wash of their own hue and give off a little of it. That
+// is the app's house effect, and a finding is exactly the kind of thing
+// it is for: the chip is a live control, and the glow is what separates
+// it from the dead text sitting beside it in the status bar. The glow
+// itself (shadow-glow-finding, a currentColor geometry) lives on the
+// CountChip in Toolbar.tsx, since it is the same for every hue.
 export type Finding = "orphan" | "unused" | "update";
 
 export const FINDING: Record<
@@ -31,7 +38,7 @@ export const FINDING: Record<
     hint: "enabled, and nothing installed asks for it",
     text: "text-orphan",
     dot: "bg-orphan",
-    chip: "border-orphan/40 text-orphan hover:bg-orphan/10",
+    chip: "border-orphan/40 bg-orphan/10 text-orphan hover:bg-orphan/20",
     icon: TriangleAlertIcon,
   },
   update: {
@@ -39,7 +46,7 @@ export const FINDING: Record<
     hint: "GameBanana has a newer build",
     text: "text-update",
     dot: "bg-update",
-    chip: "border-update/40 text-update hover:bg-update/10",
+    chip: "border-update/40 bg-update/10 text-update hover:bg-update/20",
     icon: DownloadIcon,
   },
   unused: {
@@ -47,7 +54,7 @@ export const FINDING: Record<
     hint: "enabled, but the only mods asking for it are disabled",
     text: "text-unused",
     dot: "bg-unused",
-    chip: "border-unused/40 text-unused hover:bg-unused/10",
+    chip: "border-unused/40 bg-unused/10 text-unused hover:bg-unused/20",
     // A triangle would overstate it: that mod is doing nothing wrong,
     // it is only asleep.
     icon: MoonIcon,

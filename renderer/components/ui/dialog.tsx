@@ -3,9 +3,9 @@ import { XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
-// Minimal modal shell: backdrop blur + centered panel elevated by a
-// ring instead of a shadow (floating popovers get the shadow; modals
-// sit on a dimmed page and don't need one).
+// Minimal modal shell: the page dims and blurs behind a glass panel,
+// capped by the aurora hairline so a modal is lit from the same edge
+// the toolbar is.
 export function Dialog({
   open,
   onClose,
@@ -40,7 +40,7 @@ export function Dialog({
   return (
     <div
       role="presentation"
-      className="fixed inset-0 isolate z-50 flex items-start justify-center bg-background/40 p-4 pt-[12vh] backdrop-blur-[2px]"
+      className="fixed inset-0 isolate z-50 flex items-start justify-center bg-background/50 p-4 pt-[12vh] backdrop-blur-[3px]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -53,7 +53,7 @@ export function Dialog({
         aria-label={title}
         data-popup=""
         className={cn(
-          "relative w-full max-w-md rounded-xl border border-border bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/5",
+          "glass hairline-t relative w-full max-w-md rounded-xl border border-border p-4 text-sm text-popover-foreground shadow-floating",
           className,
         )}
       >

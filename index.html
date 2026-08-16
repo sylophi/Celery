@@ -35,6 +35,15 @@
     </script>
   </head>
   <body>
+    <!-- The sky the app sits under: drifting aurora over two star
+         fields. Decoration with no hit area and nothing to configure,
+         so it lives in the shell rather than in the React tree. Styled
+         and explained in renderer/index.css. -->
+    <div class="atmosphere" aria-hidden="true">
+      <div class="atmosphere-aurora"></div>
+      <div class="atmosphere-stars"></div>
+      <div class="atmosphere-stars atmosphere-stars-far"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/renderer/index.tsx"></script>
   </body>

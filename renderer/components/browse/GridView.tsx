@@ -111,14 +111,22 @@ function ModCard({
         aria-label={`select ${name}`}
         aria-pressed={selected}
         className={cn(
-          "flex w-full cursor-pointer flex-col gap-1.5 rounded-xl p-1.5 transition-colors outline-none",
-          "hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50",
-          selected && "bg-accent",
+          // Tiles lift toward you on hover and light up when picked.
+          // Cheap to animate (transform + shadow only) and it is what
+          // turns a flat grid of screenshots into a shelf.
+          "flex w-full cursor-pointer flex-col gap-1.5 rounded-xl p-1.5 outline-none",
+          "transition-[transform,background-color,box-shadow] duration-150 ease-out-quart",
+          "hover:-translate-y-0.5 hover:bg-accent/70 focus-visible:ring-3 focus-visible:ring-ring/50",
+          selected && "bg-accent shadow-glow",
         )}
       >
         <span
           className={cn(
             "relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted/50 ring-1 transition-all",
+            // A breath of the sky rising over the artwork: it seats 150
+            // unrelated screenshots into one app. A pseudo-element, not
+            // a child span, so the grid carries no extra DOM per tile.
+            "after:absolute after:inset-0 after:bg-gradient-to-t after:from-heart/15 after:to-60% after:content-['']",
             selected ? "ring-2 ring-ring" : "ring-border",
             // Disabled mods keep their art but stop competing for
             // attention with the ones actually being loaded.

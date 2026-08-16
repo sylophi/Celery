@@ -1,4 +1,5 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import { SELECTED_NODE } from "./ModNode";
 import { cn } from "@/lib/utils";
 
 // A dependency that is referenced by installed mods but not present in
@@ -16,7 +17,7 @@ export function GhostNode({ data, selected }: NodeProps<GhostFlowNode>) {
     <div
       className={cn(
         "flex h-full items-center gap-1.5 rounded-full border border-dashed bg-transparent px-2.5",
-        selected ? "border-ring ring-3 ring-ring/40" : "border-destructive/60",
+        selected ? SELECTED_NODE : "border-destructive/60",
       )}
       title={`missing: needed by ${data.neededBy} installed ${data.neededBy === 1 ? "mod" : "mods"}`}
     >

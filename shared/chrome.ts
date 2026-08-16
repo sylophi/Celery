@@ -26,3 +26,13 @@ export const TRAFFIC_LIGHT_POSITION = {
 
 export const TRAFFIC_LIGHT_INSET =
   TRAFFIC_LIGHT_POSITION.x + PITCH * 2 + BUTTON + GAP;
+
+// The shell's colours: sRGB duplicates of the renderer's --background /
+// --foreground tokens (renderer/index.css), which the native chrome
+// needs before any CSS loads. Main paints the window background with
+// them so resize flashes blend in, and Windows tints its caption
+// buttons with them. Retune together with the tokens.
+export const CHROME_COLORS = {
+  light: { background: "#f6f5ff", foreground: "#1d1b38" },
+  dark: { background: "#111023", foreground: "#f1f0fb" },
+} as const;
