@@ -111,13 +111,13 @@ function ModCard({
         aria-label={`select ${name}`}
         aria-pressed={selected}
         className={cn(
-          // Tiles lift toward you on hover. Cheap to animate (transform
-          // + background only) and it is what turns a flat grid of
-          // screenshots into a shelf.
+          // Tiles lift toward you on hover, and the picked one stays
+          // lifted: shadow-lift is a grounded tinted shadow, so a
+          // raised tile casts onto the sky instead of glowing at it.
           "flex w-full cursor-pointer flex-col gap-1.5 rounded-xl p-1.5 outline-none",
-          "transition-[transform,background-color] duration-150 ease-out-quart",
-          "hover:-translate-y-0.5 hover:bg-accent/70 focus-visible:ring-3 focus-visible:ring-ring/50",
-          selected && "bg-accent",
+          "transition-[transform,background-color,box-shadow] duration-150 ease-out-quart",
+          "hover:-translate-y-0.5 hover:bg-accent/70 hover:shadow-lift focus-visible:ring-3 focus-visible:ring-ring/50",
+          selected && "bg-accent shadow-lift",
         )}
       >
         <span

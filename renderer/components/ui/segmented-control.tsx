@@ -42,10 +42,11 @@ export function SegmentedControl<T extends string>({
             // The selected segment is a quiet wash of the accent: it
             // says where you are, it is not the thing to press. Solid
             // accent stays reserved for the primary button.
-            // More alpha over dark: a wash that reads on white sinks
-            // into the night canvas (the edge tokens' lesson).
+            // A wash plus a 1px inset edge, so the selected segment has
+            // a boundary and not just a stain. More alpha over dark: a
+            // wash that reads on white sinks into the night canvas.
             option.selected
-              ? "bg-primary/15 text-foreground dark:bg-primary/30"
+              ? "bg-primary/15 text-foreground ring-1 ring-primary/30 ring-inset dark:bg-primary/30 dark:ring-primary/45"
               : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
           )}
         >

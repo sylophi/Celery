@@ -23,7 +23,9 @@ export function ProgressBar({
     >
       <div
         className={cn(
-          "h-full rounded-full bg-primary transition-[width] duration-200",
+          // The accent ramp runs the direction of travel; bg-primary is
+          // the floor under it.
+          "gradient-accent-x h-full rounded-full bg-primary transition-[width] duration-200",
           pct === null && "animate-pulse",
         )}
         style={{ width: `${pct ?? 100}%` }}

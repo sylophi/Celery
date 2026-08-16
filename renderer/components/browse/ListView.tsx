@@ -65,7 +65,7 @@ function ModRow({
         // A rail, not a fill change alone: at 32px a row the accent
         // edge is what the eye can find again after scrolling.
         selected
-          ? "bg-accent before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:bg-primary before:content-['']"
+          ? "bg-accent before:absolute before:inset-y-1 before:left-0 before:w-0.5 before:rounded-full before:content-[''] before:gradient-accent-y before:bg-primary"
           : "hover:bg-accent/70",
       )}
     >

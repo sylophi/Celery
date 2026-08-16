@@ -51,7 +51,7 @@ export function Toolbar({
       className="z-40 flex h-(--toolbar-height) shrink-0 items-center gap-2.5 bg-background/70 hairline-b"
       style={dragRegion("drag")}
     >
-      <span className="shrink-0 text-[13px] font-semibold tracking-tight">
+      <span className="shrink-0 gradient-ink-text text-[13px] font-semibold tracking-tight">
         Celery
       </span>
       <div className="shrink-0" style={dragRegion("no-drag")}>

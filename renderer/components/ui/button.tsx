@@ -8,7 +8,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // A raised key: top-lit accent fill, 1px sheen, seated by a
+        // tight shadow (see the effects block in index.css). bg-primary
+        // stays underneath as the floor the gradient sits on.
+        default:
+          "gradient-control bg-primary text-primary-foreground shadow-control hover:brightness-105 active:brightness-95",
         outline:
           "border-border bg-background/30 hover:border-ring/50 hover:bg-accent/70 hover:text-accent-foreground aria-expanded:bg-accent aria-expanded:text-accent-foreground dark:border-input dark:bg-input/20 dark:hover:bg-input/40",
         secondary:
