@@ -21,7 +21,7 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center rounded-md border border-border",
+        "flex shrink-0 items-center overflow-hidden rounded-md border border-border bg-background/30",
         md ? "h-8 text-[13px]" : "h-7 text-xs",
         className,
       )}
@@ -33,14 +33,19 @@ export function SegmentedControl<T extends string>({
           onClick={() => onSelect(option.value)}
           aria-pressed={option.selected}
           className={cn(
-            "flex h-full cursor-pointer items-center gap-1.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+            // No corner rounding per segment: the container's
+            // overflow-hidden clips the first and last against its own
+            // radius. The focus ring is inset for the same reason: an
+            // outward ring would be clipped away entirely.
+            "flex h-full cursor-pointer items-center gap-1.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
             md ? "px-3" : "px-2",
             i > 0 && "border-l border-border",
-            i === 0 && "rounded-l-md",
-            i === options.length - 1 && "rounded-r-md",
+            // The selected segment wears the accent gradient flat. The
+            // raised-key treatment stays reserved for the button that
+            // acts.
             option.selected
-              ? "bg-secondary text-foreground"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              ? "gradient-accent text-primary-foreground"
+              : "text-muted-foreground hover:bg-accent/70 hover:text-foreground",
           )}
         >
           {option.icon}

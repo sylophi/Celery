@@ -6,7 +6,11 @@ import { attachContextMenu } from "./electron/contextMenu";
 import { startUpdater } from "./electron/updater";
 import { ensureCeleryRoot, initCeleryRoot } from "./lib/util/paths";
 import { isMac, isWindows } from "./lib/util/platform";
-import { TOOLBAR_HEIGHT, TRAFFIC_LIGHT_POSITION } from "@shared/chrome";
+import {
+  CHROME_COLORS,
+  TOOLBAR_HEIGHT,
+  TRAFFIC_LIGHT_POSITION,
+} from "@shared/chrome";
 
 // A stable explicit AppUserModelID keeps taskbar grouping and pins
 // working for the portable Windows build (the default AUMID is derived
@@ -20,18 +24,16 @@ registerIpcHandlers();
 
 let mainWindow: BrowserWindow | null = null;
 
-// Windows chrome colors must track the renderer theme by hand; sRGB
-// duplicates of the v1 tokens (bg-white / neutral-900). The window
-// background matches `--background` so resize flashes blend in; the
 // The overlay is as tall as the app's own toolbar, so Windows centres
 // its caption buttons in that row instead of floating them above it.
 function chromeColors() {
-  const dark = nativeTheme.shouldUseDarkColors;
+  const theme =
+    CHROME_COLORS[nativeTheme.shouldUseDarkColors ? "dark" : "light"];
   return {
-    backgroundColor: dark ? "#171717" : "#ffffff",
+    backgroundColor: theme.background,
     overlay: {
-      color: dark ? "#171717" : "#ffffff",
-      symbolColor: dark ? "#fafafa" : "#171717",
+      color: theme.background,
+      symbolColor: theme.foreground,
       height: TOOLBAR_HEIGHT,
     },
   };

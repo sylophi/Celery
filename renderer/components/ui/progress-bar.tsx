@@ -23,7 +23,7 @@ export function ProgressBar({
     >
       <div
         className={cn(
-          "h-full rounded-full bg-primary transition-[width] duration-200",
+          "gradient-accent h-full rounded-full transition-[width] duration-200",
           pct === null && "animate-pulse",
         )}
         style={{ width: `${pct ?? 100}%` }}

@@ -3,9 +3,7 @@ import { XIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
-// Minimal modal shell: backdrop blur + centered panel elevated by a
-// ring instead of a shadow (floating popovers get the shadow; modals
-// sit on a dimmed page and don't need one).
+// Minimal modal shell: the page dims and blurs behind a glass panel.
 export function Dialog({
   open,
   onClose,
@@ -40,7 +38,12 @@ export function Dialog({
   return (
     <div
       role="presentation"
-      className="fixed inset-0 isolate z-50 flex items-start justify-center bg-background/40 p-4 pt-[12vh] backdrop-blur-[2px]"
+      // The scrim dims but does not blur: a viewport-wide backdrop-filter
+      // would re-run on every aurora frame for as long as the dialog is
+      // open. The panel's glass carries the blur, which is also why the
+      // scrim must NOT isolate: isolation forms a backdrop root, and the
+      // panel would then blur nothing but the scrim's own flat fill.
+      className="fixed inset-0 z-50 flex items-start justify-center bg-background/60 p-4 pt-[12vh]"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -53,7 +56,7 @@ export function Dialog({
         aria-label={title}
         data-popup=""
         className={cn(
-          "relative w-full max-w-md rounded-xl border border-border bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/5",
+          "glass hairline-t relative w-full max-w-md rounded-xl border border-border p-4 text-sm text-popover-foreground shadow-floating",
           className,
         )}
       >

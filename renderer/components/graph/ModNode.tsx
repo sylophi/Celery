@@ -18,6 +18,10 @@ export type ModNodeData = {
 };
 export type ModFlowNode = Node<ModNodeData, "mod">;
 
+// The one way a selected graph node is marked, shared by both node
+// shapes here and by GhostNode.
+export const SELECTED_NODE = "border-ring ring-3 ring-ring/40";
+
 // Two node shapes: top-level mods are two-line cards, dependencies are
 // slim single-line pills. The layout reads these to size bands.
 export const CARD_HEIGHT = 46;
@@ -50,7 +54,7 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
       <div
         className={cn(
           "flex h-full items-center gap-1.5 rounded-full border bg-card px-2.5",
-          selected ? "border-ring ring-3 ring-ring/40" : "border-border",
+          selected ? SELECTED_NODE : "border-border",
         )}
       >
         <Handle type="target" position={Position.Top} isConnectable={false} />
@@ -110,7 +114,7 @@ export function ModNode({ data, selected }: NodeProps<ModFlowNode>) {
     <div
       className={cn(
         "h-full rounded-lg border bg-card px-2.5 py-1.5",
-        selected ? "border-ring ring-3 ring-ring/40" : "border-border",
+        selected ? SELECTED_NODE : "border-border",
       )}
     >
       <Handle type="target" position={Position.Top} isConnectable={false} />

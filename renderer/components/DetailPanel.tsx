@@ -36,10 +36,14 @@ export type PanelPlacement = "floating" | "docked";
 
 function panelClass(placement: PanelPlacement): string {
   return cn(
-    "flex flex-col overflow-hidden bg-popover text-popover-foreground",
+    "flex flex-col overflow-hidden text-popover-foreground",
+    // No glass on either placement: the docked panel has only the sky
+    // behind it, and the floating one sits over the live graph canvas,
+    // where a blur would re-run on every pan/zoom frame (the minimap's
+    // lesson, at 10x the area).
     placement === "floating"
-      ? "absolute inset-y-3 right-3 z-40 w-72 rounded-xl border border-border shadow-floating"
-      : "h-full w-full border-l border-border",
+      ? "hairline-t absolute inset-y-3 right-3 z-40 w-72 rounded-xl border border-border bg-popover/90 shadow-floating"
+      : "h-full w-full border-l border-border bg-popover/90",
   );
 }
 
@@ -677,7 +681,7 @@ function DepRow({
 }) {
   const file = index.byFileName.get(fileName);
   return (
-    <li className="group relative flex h-7 items-center gap-1.5 rounded-md px-1.5 transition-colors hover:bg-muted">
+    <li className="group relative flex h-7 items-center gap-1.5 rounded-md px-1.5 transition-colors hover:bg-accent/70">
       <button
         type="button"
         onClick={() => onSelect(fileName)}

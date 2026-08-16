@@ -17,25 +17,47 @@
   }
 }
 
+/* ---------------------------------------------------------------------
+   The palette is the mountain at two times of day: dawn on the summit
+   for light, the night sky over it for dark. Both are mixed from one
+   triad, so nothing in the app ever has to invent a hue of its own:
+
+     --crystal  the dash gem's blue
+     --heart    the crystal heart's violet, the app's own colour
+     --beyond   Badeline's magenta, the hue past the top of the mountain
+
+   Every gradient and tint below is those three and nothing else,
+   which is what keeps a purple app from turning into a pile of
+   unrelated purples. Neutrals are not grey either: they carry a few
+   points of the same violet chroma, so a "grey" border reads as part
+   of the sky rather than a hole punched in it.
+   --------------------------------------------------------------------- */
+
 :root {
-  --background: var(--color-white);
-  --foreground: var(--color-neutral-950);
-  --card: var(--color-white);
-  --card-foreground: var(--color-neutral-950);
-  --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-950);
-  --primary: var(--color-neutral-900);
-  --primary-foreground: var(--color-neutral-50);
-  --secondary: var(--color-neutral-100);
-  --secondary-foreground: var(--color-neutral-900);
-  --muted: var(--color-neutral-100);
-  --muted-foreground: var(--color-neutral-500);
-  --accent: var(--color-neutral-100);
-  --accent-foreground: var(--color-neutral-900);
-  --destructive: var(--color-rose-500);
-  --border: var(--color-neutral-200);
-  --input: var(--color-neutral-200);
-  --ring: var(--color-neutral-400);
+  --crystal: oklch(0.56 0.17 255);
+  --heart: oklch(0.56 0.21 295);
+  --beyond: oklch(0.62 0.2 338);
+
+  /* sRGB duplicates of --background/--foreground live in
+     shared/chrome.ts for the native shell; retune them together. */
+  --background: oklch(0.965 0.02 290);
+  --foreground: oklch(0.24 0.055 285);
+  --card: oklch(0.995 0.006 290);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  /* The floor under the raised-key button fill (gradient-control),
+     and the solid the button reads as where its gradient can't paint. */
+  --primary: oklch(0.52 0.2 292);
+  --primary-foreground: oklch(0.99 0.008 290);
+  --muted: oklch(0.945 0.022 290);
+  --muted-foreground: oklch(0.52 0.045 288);
+  --accent: oklch(0.93 0.034 292);
+  --accent-foreground: oklch(0.28 0.07 288);
+  --destructive: oklch(0.58 0.2 20);
+  --border: oklch(0.88 0.028 290);
+  --input: oklch(0.88 0.028 290);
+  --ring: oklch(0.6 0.17 292);
   --radius: 0.625rem;
 
   /* Breathing room at the ends of the toolbar and status bar, and the
@@ -44,73 +66,135 @@
 
   /* Domain tokens. Each colored token defends its exception. */
   /* Enabled state is the one thing worth a hue everywhere it appears
-     (node dot, tile dot): green reads as "loaded" at a
-     glance, and it's celery. */
-  --on: oklch(0.66 0.15 155);
+     (node dot, tile dot): green reads as "loaded" at a glance, and it's
+     celery. Pulled toward mint so it belongs to a violet sky. */
+  --on: oklch(0.52 0.15 162);
 
   /* The three things the app finds and expects you to deal with. They
      share badge slots. A row can carry two at once, and the status bar
      carries all three, so each gets its own hue and keeps it
      everywhere: a glance says WHICH finding without reading the word.
      Spread far apart on the wheel, and clear of --on and --destructive,
-     which are the other two hues a row can show.
+     which are the other two hues a row can show. They are also held
+     clear of --heart and --crystal, which the chrome now wears: a badge
+     the colour of the furniture stops reading as a badge.
      Amber for orphans alone: they are the only one with a destructive
-     action behind them. Blue for updates, the fetch-this hue. Violet
-     for unused, which is doing no harm and is only asleep. */
-  --orphan: oklch(0.66 0.16 65);
-  --update: oklch(0.57 0.16 250);
-  --unused: oklch(0.57 0.16 300);
+     action behind them. Cyan for updates, the fetch-this hue, brighter
+     and colder than the chrome's blue. Magenta for unused, which is
+     doing no harm and is only asleep. */
+  --orphan: oklch(0.54 0.15 62);
+  --update: oklch(0.52 0.15 218);
+  --unused: oklch(0.53 0.19 330);
+
   /* Hard dependency edges: deliberately faint. With collab mods
      declaring 50-100 deps each the edge mass must read as texture,
      with full contrast reserved for the selected neighborhood. */
-  --edge-hard: oklch(0.85 0 0);
+  --edge-hard: oklch(0.66 0.07 292 / 0.45);
   /* Optional dependency edges: one step weaker + dashed in the view;
      hierarchy by weight, like songloupe's grid weak/mid/strong. */
-  --edge-optional: oklch(0.92 0 0);
+  --edge-optional: oklch(0.7 0.05 292 / 0.24);
   /* Edges touching the selected node: strong but not full-contrast;
      a 50-edge fan at foreground strength reads as a black smear. */
-  --edge-active: oklch(0.5 0 0);
+  --edge-active: oklch(0.55 0.18 292);
+
+  /* The sky behind the app. Three blooms of the triad, wide and weak:
+     strong enough to be a place, weak enough that 10px text sits on it
+     unharmed. One set serves both themes, since the blooms read
+     against whatever --background is under them. */
+  --aurora-1: color-mix(in oklab, var(--heart) 30%, transparent);
+  --aurora-2: color-mix(in oklab, var(--crystal) 26%, transparent);
+  --aurora-3: color-mix(in oklab, var(--beyond) 22%, transparent);
+  --star: oklch(0.99 0.03 290);
 
   /* Floating-panel elevation, shared by every floating surface so they
-     all cast the same shadow. */
+     all cast the same shadow, tinted with --heart rather than black
+     so that shadows belong to the sky too. The onboarding card borrows it
+     as hover elevation. */
   --shadow-floating:
-    0 8px 24px -8px oklch(0 0 0 / 0.15), 0 2px 6px -2px oklch(0 0 0 / 0.08);
+    0 10px 30px -10px color-mix(in oklab, var(--heart) 42%, transparent),
+    0 2px 6px -2px oklch(0.3 0.06 288 / 0.12);
+  /* The two named gradients: the accent runs violet into blue on a
+     diagonal (fills, text, rails), the aurora runs the full triad
+     across the chrome hairline and fades out at both ends. One-off
+     decorative washes (the tile veil, the graph regions) compose triad
+     color tokens at the call site instead of naming a third. Nothing
+     emits a halo: the gradients themselves are the emphasis. */
+  --gradient-accent: linear-gradient(
+    135deg in oklab,
+    var(--heart),
+    var(--crystal)
+  );
+  --gradient-aurora: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--crystal) 45%, transparent) 22%,
+    color-mix(in oklab, var(--heart) 60%, transparent) 50%,
+    color-mix(in oklab, var(--beyond) 45%, transparent) 78%,
+    transparent 100%
+  );
+  /* The primary button alone gets a built fill: the accent lit from
+     the top-left, with a 1px sheen and a tight seating shadow, so the
+     one control that acts reads as a raised key rather than a painted
+     rectangle. */
+  --gradient-control: linear-gradient(
+    135deg in oklch,
+    oklch(from var(--heart) calc(l + 0.04) c h),
+    oklch(from var(--crystal) calc(l - 0.02) c h)
+  );
+  --shadow-control:
+    inset 0 1px 0 oklch(1 0 0 / 0.22), 0 1px 2px oklch(0.2 0.08 292 / 0.35);
 }
 
 .dark {
-  /* Canvas lifted one step above pure-black neutral-950 so it reads
-     less heavy; card/popover sit a step above the canvas so floating
-     surfaces still elevate. */
-  --background: var(--color-neutral-900);
-  --foreground: var(--color-neutral-50);
-  --card: oklch(0.245 0 0);
-  --card-foreground: var(--color-neutral-50);
-  --popover: oklch(0.245 0 0);
-  --popover-foreground: var(--color-neutral-50);
-  --primary: var(--color-neutral-200);
-  --primary-foreground: var(--color-neutral-900);
-  --secondary: var(--color-neutral-800);
-  --secondary-foreground: var(--color-neutral-50);
-  --muted: var(--color-neutral-800);
-  --muted-foreground: var(--color-neutral-400);
-  --accent: var(--color-neutral-800);
-  --accent-foreground: var(--color-neutral-50);
-  --destructive: var(--color-rose-500);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: var(--color-neutral-500);
+  /* Night over the mountain: not black, and not grey either. */
+  --background: oklch(0.185 0.038 285);
+  --foreground: oklch(0.96 0.014 290);
+  /* Card/popover sit a step above the canvas so floating surfaces still
+     elevate, and carry a touch more chroma so glass reads as tinted. */
+  --card: oklch(0.245 0.045 287);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  /* Lifted a step over light so it holds against the night canvas;
+     white text still clears 4.5:1. */
+  --primary: oklch(0.55 0.2 292);
+  --muted: oklch(0.29 0.045 288);
+  --muted-foreground: oklch(0.72 0.035 288);
+  --accent: oklch(0.33 0.06 290);
+  --accent-foreground: oklch(0.97 0.012 290);
+  --destructive: oklch(0.68 0.19 20);
+  /* White-tinted-violet at low alpha rather than a flat colour: borders
+     then hold up over card, popover and the bare sky alike. */
+  --border: oklch(0.82 0.08 292 / 16%);
+  --input: oklch(0.82 0.08 292 / 22%);
+  --ring: oklch(0.7 0.16 292);
 
-  --on: oklch(0.72 0.15 155);
+  --on: oklch(0.75 0.16 165);
+  --orphan: oklch(0.78 0.15 68);
+  --update: oklch(0.76 0.13 220);
+  --unused: oklch(0.72 0.19 332);
+
   /* White-over-dark needs more alpha than black-over-light to read at
      the same strength (songloupe's minimap lesson). */
-  --edge-hard: oklch(1 0 0 / 0.18);
-  --edge-optional: oklch(1 0 0 / 0.09);
-  --edge-active: oklch(0.75 0 0);
+  --edge-hard: oklch(0.75 0.09 292 / 0.24);
+  --edge-optional: oklch(0.75 0.09 292 / 0.12);
+  --edge-active: oklch(0.78 0.15 292);
 
-  /* Lifted for the dark canvas, same hues. */
-  --orphan: oklch(0.76 0.15 70);
-  --update: oklch(0.72 0.14 250);
-  --unused: oklch(0.76 0.14 302);
+  --shadow-floating:
+    0 14px 36px -12px oklch(0.05 0.04 285 / 0.7),
+    0 0 0 1px color-mix(in oklab, var(--heart) 26%, transparent);
+  /* Night needs a darker seat under the raised button. */
+  --shadow-control:
+    inset 0 1px 0 oklch(1 0 0 / 0.25), 0 1px 2px oklch(0 0 0 / 0.5);
+  /* Text needs the accent ramp lifted, because the violet end
+     disappears into the night. Derived hue-for-hue from the triad, so retuning it
+     carries through. (Light has no override; the text utility falls
+     back to --gradient-accent.) */
+  --gradient-accent-text: linear-gradient(
+    135deg in oklab,
+    oklch(from var(--heart) 0.82 0.14 h),
+    oklch(from var(--crystal) 0.8 0.13 h)
+  );
 }
 
 @theme inline {
@@ -123,8 +207,6 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -137,6 +219,8 @@
   --color-orphan: var(--orphan);
   --color-update: var(--update);
   --color-unused: var(--unused);
+  --color-crystal: var(--crystal);
+  --color-heart: var(--heart);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -144,23 +228,32 @@
   --radius-2xl: calc(var(--radius) * 1.8);
 
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --shadow-floating: var(--shadow-floating);
+  --shadow-control: var(--shadow-control);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-  html,
-  body {
+  html {
+    /* The base colour lives here so it propagates to the canvas and the
+       atmosphere layers below can paint over it. */
     background: var(--background);
   }
   body {
     @apply font-sans text-foreground antialiased;
+    /* Transparent, so the sky shows: the app's own surfaces are what
+       paint over it. */
+    background: transparent;
     font-feature-settings: "tnum" 1;
     user-select: none;
+  }
+  #root {
+    /* Above the atmosphere, which is z-0 and behind everything. */
+    position: relative;
+    z-index: 1;
   }
   .tabular {
     font-variant-numeric: tabular-nums;
@@ -185,20 +278,207 @@
     background: transparent;
   }
   [data-platform="win32"] ::-webkit-scrollbar-thumb {
-    background: oklch(0.55 0 0 / 0.35);
+    background: color-mix(in oklab, var(--heart) 40%, transparent);
     background-clip: content-box;
     border: 2px solid transparent;
     border-radius: 5px;
   }
   [data-platform="win32"] ::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.55 0 0 / 0.55);
+    background: color-mix(in oklab, var(--heart) 65%, transparent);
     background-clip: content-box;
     border: 2px solid transparent;
   }
 }
 
+/* ---------------------------------------------------------------------
+   The atmosphere: three fixed layers behind the whole app, painted by
+   markup in index.html rather than by a component, because nothing in
+   React ever needs to know they exist.
+
+   Aurora blooms drift on a slow cycle; two star fields twinkle out of
+   phase so the sky never pulses as one. All of it is decoration with no
+   hit area, and all of it stops dead under prefers-reduced-motion.
+   --------------------------------------------------------------------- */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.atmosphere-aurora {
+  position: absolute;
+  /* Bled just past every edge so the blooms' soft ends never show a
+     seam while they drift: the translate peaks at ~2.5% of the viewport
+     (the scale-up end covers its own edges), and the compositor
+     rasterizes this whole layer, so the bleed stays as small as the
+     animation allows. */
+  inset: -3%;
+  background-image:
+    radial-gradient(38% 42% at 20% 14%, var(--aurora-1) 0%, transparent 72%),
+    radial-gradient(42% 38% at 84% 24%, var(--aurora-2) 0%, transparent 72%),
+    radial-gradient(48% 46% at 52% 104%, var(--aurora-3) 0%, transparent 72%);
+  animation: aurora-drift 54s var(--ease-out-quart) infinite alternate;
+}
+
+.atmosphere-stars {
+  position: absolute;
+  inset: 0;
+  /* Dawn has no stars: hidden outright in light so the layers cost
+     nothing there, not faded to zero and left animating. */
+  display: none;
+  /* Each field twinkles between its own bounds, out of phase with the
+     other, so the sky never pulses as one. The static opacity is the
+     resting state reduced-motion falls back to when the keyframes (which
+     otherwise override it) are switched off. */
+  opacity: 0.6;
+  --twinkle-from: 0.35;
+  --twinkle-to: 0.9;
+  /* One tile of sky, repeated. Sizes vary per star so the field has
+     depth rather than reading as a regular dot screen. */
+  background-image:
+    radial-gradient(1.4px 1.4px at 8% 12%, var(--star), transparent 100%),
+    radial-gradient(1px 1px at 31% 47%, var(--star), transparent 100%),
+    radial-gradient(1.6px 1.6px at 57% 8%, var(--star), transparent 100%),
+    radial-gradient(1px 1px at 74% 63%, var(--star), transparent 100%),
+    radial-gradient(1.2px 1.2px at 91% 29%, var(--star), transparent 100%),
+    radial-gradient(1px 1px at 18% 82%, var(--star), transparent 100%),
+    radial-gradient(1.5px 1.5px at 45% 91%, var(--star), transparent 100%),
+    radial-gradient(1px 1px at 66% 34%, var(--star), transparent 100%);
+  background-size: 460px 380px;
+  animation: twinkle 7s ease-in-out infinite alternate;
+}
+
+/* The far field: smaller tile, dimmer, twinkling on its own clock and
+   fading the opposite way. */
+.atmosphere-stars-far {
+  background-size: 270px 230px;
+  opacity: 0.25;
+  --twinkle-from: 0.4;
+  --twinkle-to: 0.15;
+  animation-duration: 11s;
+}
+
+.dark .atmosphere-stars {
+  display: block;
+}
+
+@keyframes aurora-drift {
+  from {
+    transform: translate3d(-2%, -1.5%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2.5%, 2%, 0) scale(1.12);
+  }
+}
+@keyframes twinkle {
+  from {
+    opacity: var(--twinkle-from);
+  }
+  to {
+    opacity: var(--twinkle-to);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Utilities: the shared moves, reused everywhere, so no component
+   invents its own version of the same effect.
+   --------------------------------------------------------------------- */
+
+/* Glass: a surface that lets the sky through, blurred so the text on it
+   still reads. Reserved for TRANSIENT surfaces over content (dialogs,
+   toasts): backdrop-filter re-runs whenever anything behind changes,
+   and the atmosphere is always animating, so a persistent glass
+   surface would keep the GPU busy in an idle app. Everything else
+   (chrome bars, the detail panel, the minimap) uses a plain
+   translucent wash instead. */
+@utility glass {
+  background-color: color-mix(in oklab, var(--popover) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* The aurora hairline: a 1px rule that is the triad rather than a
+   border colour. On the chrome bars and the sticky section headers it
+   REPLACES the `border-b`/`border-t` it sits on; on the glass panels
+   (dialog, floating detail panel) it is additive, lighting the top
+   edge from just inside the border.
+
+   Painted as a background layer rather than a pseudo-element, so it
+   never has to claim `position`, which would fight `sticky` on the
+   section headers. It also composes with `glass` and the translucent
+   chrome washes, which only set a background *colour*. */
+@utility hairline-b {
+  background-image: var(--gradient-aurora);
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: bottom;
+}
+@utility hairline-t {
+  background-image: var(--gradient-aurora);
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: top;
+}
+
+/* The effect gradients as utilities. `gradient-*` rather than
+   `fill-*`, which is Tailwind's own SVG-fill namespace. */
+@utility gradient-accent {
+  /* The gradient's own midpoint as a solid floor, so the surface stays
+     accent-coloured even where the image can't paint. */
+  background-color: color-mix(in oklab, var(--heart) 50%, var(--crystal));
+  background-image: var(--gradient-accent);
+}
+@utility gradient-accent-text {
+  /* Reads a token with a fallback rather than a `.dark &` override in
+     here: a nested dark rule inside @utility is flattened by the
+     compiler and ends up applying in both themes. Only .dark defines
+     the text ramp; light falls through to the plain accent. */
+  background-image: var(--gradient-accent-text, var(--gradient-accent));
+  background-clip: text;
+  color: transparent;
+}
+@utility gradient-control {
+  /* Like gradient-accent: its own floor, so the utility is
+     self-sufficient. */
+  background-color: var(--primary);
+  background-image: var(--gradient-control);
+}
+
+/* Shimmer bar for indeterminate progress (scan). Transform, not
+   `left`, so the sweep runs on the compositor. The element is a third
+   of its track wide, so 300% of itself clears the far end. */
+@keyframes loader-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+.loader-shimmer {
+  animation: loader-shimmer 1.4s var(--ease-out-quart) infinite;
+}
+
+/* Kill every animation the theme runs. Placed AFTER the rules it
+   overrides: it ties on specificity, so it must win on order. The
+   shimmer also widens to a quiet full-track fill, since frozen at a
+   third it would read as determinate progress stuck at 33%. */
+@media (prefers-reduced-motion: reduce) {
+  .atmosphere-aurora,
+  .atmosphere-stars,
+  .loader-shimmer,
+  .animate-pulse {
+    animation: none;
+  }
+  .loader-shimmer {
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+
 /* The one rule that knows about native window buttons.
-   
+
    Both platforms overlay theirs on the app's toolbar, just at opposite
    ends: macOS traffic lights lead, Windows caption buttons trail. Each
    side arrives as an inset custom property, and the bar pads by
@@ -224,19 +504,10 @@
      which for a full-width bar is the window — the same thing the
      overlay measures against. */
   --chrome-inset-end: calc(100% - env(titlebar-area-width, calc(100% - 140px)));
-}
-
-/* Shimmer bar for indeterminate progress (scan). */
-@keyframes loader-shimmer {
-  0% {
-    left: -33%;
-  }
-  100% {
-    left: 100%;
-  }
-}
-.loader-shimmer {
-  animation: loader-shimmer 1.4s var(--ease-out-quart) infinite;
+  /* Windows paints its caption-button strip as an opaque block of
+     CHROME_COLORS over this same row, so the bar goes opaque there:
+     a translucent wash would show a seam where the overlay begins. */
+  background-color: var(--background);
 }
 
 /* React Flow chrome, retinted to the token system. The graph pane is
@@ -260,6 +531,9 @@
   opacity: 0.55;
 }
 .react-flow__edge.edge-active .react-flow__edge-path {
+  /* Colour and weight alone carry the selected neighbourhood. No
+     drop-shadow here: an SVG filter per path re-rasterizes a 50-edge
+     fan on every pan/zoom frame, exactly when the user is navigating. */
   stroke: var(--edge-active);
   stroke-width: 1.5;
 }
@@ -270,15 +544,19 @@
 }
 .react-flow__minimap {
   @apply overflow-hidden rounded-lg border border-border;
-  background-color: var(--background);
+  /* No glass: its backdrop is the live canvas, so blur would re-run on
+     every pan/zoom frame. Mixed toward --background rather than
+     transparent: same colour, but opaque, so the canvas beneath it is
+     culled instead of blended. */
+  background-color: color-mix(in oklab, var(--popover) 92%, var(--background));
 }
 .react-flow__minimap-mask {
-  fill: oklch(0 0 0 / 0.08);
+  fill: oklch(0.25 0.06 288 / 0.1);
 }
 .dark .react-flow__minimap-mask {
-  fill: oklch(1 0 0 / 0.14);
+  fill: oklch(0.08 0.04 285 / 0.4);
 }
 .react-flow__minimap-node {
-  fill: var(--muted-foreground);
-  opacity: 0.4;
+  fill: var(--heart);
+  opacity: 0.32;
 }

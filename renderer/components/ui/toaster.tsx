@@ -19,7 +19,7 @@ export function Toaster() {
       toastOptions={{
         classNames: {
           toast:
-            "!bg-popover !text-popover-foreground !border !border-border !shadow-floating",
+            "glass! !text-popover-foreground !border !border-border !shadow-floating",
           // The app disables text selection globally. A message you may
           // need to copy (a filesystem error) is the exception.
           title: "!text-xs !select-text",

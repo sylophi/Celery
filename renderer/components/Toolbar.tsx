@@ -43,10 +43,14 @@ export function Toolbar({
   return (
     <header
       data-titlebar
-      className="z-40 flex h-(--toolbar-height) shrink-0 items-center gap-2.5 border-b border-border"
+      // A translucent wash over the sky (no blur: nothing but the
+      // atmosphere is ever behind this bar), closed off by the aurora
+      // hairline instead of a border. Where the hairline appears is
+      // documented on the utility in index.css.
+      className="z-40 flex h-(--toolbar-height) shrink-0 items-center gap-2.5 bg-background/70 hairline-b"
       style={dragRegion("drag")}
     >
-      <span className="shrink-0 text-[13px] font-semibold tracking-tight">
+      <span className="shrink-0 gradient-accent-text text-[13px] font-semibold tracking-tight">
         Celery
       </span>
       <div className="shrink-0" style={dragRegion("no-drag")}>
@@ -95,7 +99,7 @@ export function Toolbar({
           }}
           placeholder="search mods"
           spellCheck={false}
-          className="h-7 w-full max-w-56 min-w-24 rounded-md border border-input bg-transparent px-2 text-xs text-foreground transition-colors outline-none placeholder:text-muted-foreground/70 hover:border-foreground/25 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+          className="h-7 w-full max-w-56 min-w-24 rounded-md border border-input bg-background/30 px-2 text-xs text-foreground transition-[color,box-shadow,border-color] outline-none placeholder:text-muted-foreground/70 hover:border-ring/50 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
         />
         <Button
           variant="ghost"
@@ -149,7 +153,7 @@ export function StatusBar({
   onReviewOrphans: () => void;
 }) {
   return (
-    <footer className="flex h-6.5 shrink-0 items-center gap-3 border-t border-border px-[var(--chrome-pad)]">
+    <footer className="flex h-6.5 shrink-0 items-center gap-3 bg-background/70 hairline-t px-[var(--chrome-pad)]">
       <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground/60">
         {folder}
       </span>

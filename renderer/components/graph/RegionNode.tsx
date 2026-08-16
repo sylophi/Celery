@@ -16,11 +16,11 @@ export type RegionFlowNode = Node<RegionNodeData, "region">;
 export function RegionNode({ data }: NodeProps<RegionFlowNode>) {
   if (data.variant === "island") {
     return (
-      <div className="pointer-events-none h-full w-full rounded-xl bg-muted/25 ring-1 ring-border/40 ring-inset" />
+      <div className="pointer-events-none h-full w-full rounded-xl bg-heart/8 ring-1 ring-border/40 ring-inset" />
     );
   }
   return (
-    <div className="pointer-events-none h-full w-full rounded-2xl bg-muted/12 ring-1 ring-border/50 ring-inset">
+    <div className="pointer-events-none h-full w-full rounded-2xl bg-gradient-to-b from-heart/8 to-crystal/5 ring-1 ring-border/50 ring-inset">
       <div className="flex items-baseline gap-2 px-4 pt-2">
         <span className="text-[13px] font-medium tracking-tight text-foreground/70">
           {data.title}

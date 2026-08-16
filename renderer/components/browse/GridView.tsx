@@ -111,14 +111,22 @@ function ModCard({
         aria-label={`select ${name}`}
         aria-pressed={selected}
         className={cn(
-          "flex w-full cursor-pointer flex-col gap-1.5 rounded-xl p-1.5 transition-colors outline-none",
-          "hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/50",
+          // Tiles lift toward you on hover. Cheap to animate (transform
+          // + background only) and it is what turns a flat grid of
+          // screenshots into a shelf.
+          "flex w-full cursor-pointer flex-col gap-1.5 rounded-xl p-1.5 outline-none",
+          "transition-[transform,background-color] duration-150 ease-out-quart",
+          "hover:-translate-y-0.5 hover:bg-accent/70 focus-visible:ring-3 focus-visible:ring-ring/50",
           selected && "bg-accent",
         )}
       >
         <span
           className={cn(
-            "relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted/50 ring-1 transition-all",
+            "relative block aspect-[16/10] w-full overflow-hidden rounded-lg bg-muted/50 ring-1 transition-[box-shadow,opacity,filter]",
+            // A breath of the sky rising over the artwork: it seats 150
+            // unrelated screenshots into one app. A pseudo-element, not
+            // a child span, so the grid carries no extra DOM per tile.
+            "after:pointer-events-none after:absolute after:inset-0 after:bg-gradient-to-t after:from-heart/15 after:to-60% after:content-['']",
             selected ? "ring-2 ring-ring" : "ring-border",
             // Disabled mods keep their art but stop competing for
             // attention with the ones actually being loaded.
@@ -147,7 +155,9 @@ function ModCard({
             // Only worth a chip once there is art to label; without it
             // the glyph already fills the tile.
             <span
-              className="absolute bottom-1 left-1 grid size-5 place-items-center rounded-md bg-background/75 backdrop-blur-sm"
+              // z-10 lifts the chip (and its title tooltip's hit area) above
+              // the veil pseudo-element, which paints after it in tree order.
+              className="absolute bottom-1 left-1 z-10 grid size-5 place-items-center rounded-md bg-background/85"
               {...(remote?.category !== undefined
                 ? { title: remote.category }
                 : {})}
@@ -190,7 +200,10 @@ function ModCard({
           })
         }
         className={cn(
-          "absolute top-2.5 left-2.5 cursor-pointer rounded bg-background/70 p-1 backdrop-blur-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+          // No backdrop blur on these two: the sky behind the app never
+          // stops moving, so ~100 tiny blur regions would re-filter every
+          // frame. A stronger wash reads the same at chip size.
+          "absolute top-2.5 left-2.5 cursor-pointer rounded bg-background/85 p-1 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
           file.favorite
             ? "text-foreground"
             : "text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100",

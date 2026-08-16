@@ -72,7 +72,7 @@ export function ReviewDialog<T>({
             const checked = !excluded.has(key);
             return (
               <li key={key} className="border-b border-border last:border-b-0">
-                <label className="flex cursor-pointer items-center gap-2 px-2 py-1.5 hover:bg-muted">
+                <label className="flex cursor-pointer items-center gap-2 px-2 py-1.5 transition-colors hover:bg-accent/70">
                   <input
                     type="checkbox"
                     checked={checked}
@@ -85,7 +85,7 @@ export function ReviewDialog<T>({
                         return next;
                       })
                     }
-                    className="size-3 shrink-0 accent-foreground"
+                    className="size-3 shrink-0 accent-ring"
                   />
                   <span
                     className={cn(
