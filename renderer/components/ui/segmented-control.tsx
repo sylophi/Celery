@@ -35,12 +35,12 @@ export function SegmentedControl<T extends string>({
           className={cn(
             // No corner rounding per segment: the container's
             // overflow-hidden clips the first and last against its own
-            // radius. The focus ring is inset for the same reason — an
+            // radius. The focus ring is inset for the same reason: an
             // outward ring would be clipped away entirely.
             "flex h-full cursor-pointer items-center gap-1.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset",
             md ? "px-3" : "px-2",
             i > 0 && "border-l border-border",
-            // The selected segment wears the accent gradient flat — the
+            // The selected segment wears the accent gradient flat. The
             // raised-key treatment stays reserved for the button that
             // acts.
             option.selected

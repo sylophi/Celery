@@ -99,16 +99,16 @@
 
   /* The sky behind the app. Three blooms of the triad, wide and weak:
      strong enough to be a place, weak enough that 10px text sits on it
-     unharmed. One set serves both themes — the blooms read against
-     whatever --background is under them. */
+     unharmed. One set serves both themes, since the blooms read
+     against whatever --background is under them. */
   --aurora-1: color-mix(in oklab, var(--heart) 30%, transparent);
   --aurora-2: color-mix(in oklab, var(--crystal) 26%, transparent);
   --aurora-3: color-mix(in oklab, var(--beyond) 22%, transparent);
   --star: oklch(0.99 0.03 290);
 
   /* Floating-panel elevation, shared by every floating surface so they
-     all cast the same shadow — tinted with --heart rather than black,
-     so shadows belong to the sky too. The onboarding card borrows it
+     all cast the same shadow, tinted with --heart rather than black
+     so that shadows belong to the sky too. The onboarding card borrows it
      as hover elevation. */
   --shadow-floating:
     0 10px 30px -10px color-mix(in oklab, var(--heart) 42%, transparent),
@@ -118,7 +118,7 @@
      across the chrome hairline and fades out at both ends. One-off
      decorative washes (the tile veil, the graph regions) compose triad
      color tokens at the call site instead of naming a third. Nothing
-     emits a halo — the gradients themselves are the emphasis. */
+     emits a halo: the gradients themselves are the emphasis. */
   --gradient-accent: linear-gradient(
     135deg in oklab,
     var(--heart),
@@ -186,8 +186,8 @@
   /* Night needs a darker seat under the raised button. */
   --shadow-control:
     inset 0 1px 0 oklch(1 0 0 / 0.25), 0 1px 2px oklch(0 0 0 / 0.5);
-  /* Text needs the accent ramp lifted — the violet end disappears into
-     the night. Derived hue-for-hue from the triad, so retuning it
+  /* Text needs the accent ramp lifted, because the violet end
+     disappears into the night. Derived hue-for-hue from the triad, so retuning it
      carries through. (Light has no override; the text utility falls
      back to --gradient-accent.) */
   --gradient-accent-text: linear-gradient(
@@ -390,8 +390,8 @@
    still reads. Reserved for TRANSIENT surfaces over content (dialogs,
    toasts): backdrop-filter re-runs whenever anything behind changes,
    and the atmosphere is always animating, so a persistent glass
-   surface would keep the GPU busy in an idle app. Everything else —
-   chrome bars, the detail panel, the minimap — uses a plain
+   surface would keep the GPU busy in an idle app. Everything else
+   (chrome bars, the detail panel, the minimap) uses a plain
    translucent wash instead. */
 @utility glass {
   background-color: color-mix(in oklab, var(--popover) 82%, transparent);
@@ -405,9 +405,9 @@
    edge from just inside the border.
 
    Painted as a background layer rather than a pseudo-element, so it
-   never has to claim `position` — which would fight `sticky` on the
-   section headers — and so it composes with `glass` and the
-   translucent chrome washes, which only set a background *colour*. */
+   never has to claim `position`, which would fight `sticky` on the
+   section headers. It also composes with `glass` and the translucent
+   chrome washes, which only set a background *colour*. */
 @utility hairline-b {
   background-image: var(--gradient-aurora);
   background-repeat: no-repeat;
@@ -462,8 +462,8 @@
 
 /* Kill every animation the theme runs. Placed AFTER the rules it
    overrides: it ties on specificity, so it must win on order. The
-   shimmer also widens to a quiet full-track fill — frozen at a third
-   it would read as determinate progress stuck at 33%. */
+   shimmer also widens to a quiet full-track fill, since frozen at a
+   third it would read as determinate progress stuck at 33%. */
 @media (prefers-reduced-motion: reduce) {
   .atmosphere-aurora,
   .atmosphere-stars,
@@ -505,7 +505,7 @@
      overlay measures against. */
   --chrome-inset-end: calc(100% - env(titlebar-area-width, calc(100% - 140px)));
   /* Windows paints its caption-button strip as an opaque block of
-     CHROME_COLORS over this same row, so the bar goes opaque there —
+     CHROME_COLORS over this same row, so the bar goes opaque there:
      a translucent wash would show a seam where the overlay begins. */
   background-color: var(--background);
 }

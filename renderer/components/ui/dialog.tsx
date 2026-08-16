@@ -40,7 +40,7 @@ export function Dialog({
       role="presentation"
       // The scrim dims but does not blur: a viewport-wide backdrop-filter
       // would re-run on every aurora frame for as long as the dialog is
-      // open. The panel's glass carries the blur — which is also why the
+      // open. The panel's glass carries the blur, which is also why the
       // scrim must NOT isolate: isolation forms a backdrop root, and the
       // panel would then blur nothing but the scrim's own flat fill.
       className="fixed inset-0 z-50 flex items-start justify-center bg-background/60 p-4 pt-[12vh]"
