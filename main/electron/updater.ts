@@ -1,18 +1,20 @@
-// In-app auto-update built on Electron's `autoUpdater` (Squirrel.Mac),
-// pointed at update.electronjs.org, which filters to the latest
-// non-draft GitHub release and does the version comparison. macOS-only:
-// the Windows build is a portable zip with no installer, and Electron's
-// Windows autoUpdater only works under a Squirrel install. Windows (and
-// dev) builds report `unsupported` so the renderer shows a caption
-// instead of a dead button.
+// In-app auto-update built on Electron's `autoUpdater` (Squirrel.Mac on
+// macOS, Squirrel.Windows under an installed Windows build), pointed at
+// update.electronjs.org, which filters to the latest non-draft GitHub
+// release and does the version comparison. The portable Windows zip has
+// no Squirrel Update.exe to apply updates with, so it (and dev builds)
+// reports `unsupported` and the renderer shows a caption instead of a
+// dead button.
 //
 // Override `CELERY_UPDATE_FEED_URL` to point at a local server for
-// end-to-end testing of a signed build.
+// end-to-end testing of a packaged build.
 import { app, autoUpdater } from "electron";
+import { REPO_SLUG } from "@shared/app";
 import { updaterContract } from "@shared/ipc/modules/updater";
 import type { UpdaterState } from "@shared/schemas";
 import { broadcastAll } from "../ipc/register";
-import { isMac } from "../lib/util/platform";
+import { isMac, platformId } from "../lib/util/platform";
+import { isSquirrelInstall } from "./squirrel";
 
 const CHECK_INTERVAL_MS = 30 * 60 * 1000;
 
@@ -29,10 +31,14 @@ export function getUpdaterState(): UpdaterState {
 }
 
 function buildFeedUrl(): string | null {
-  if (!isMac) return null;
+  // The macOS zip is always an updatable install, Windows only under a
+  // Squirrel one (the portable zip has no Update.exe). The override
+  // deliberately sits behind this gate: feed testing must not activate
+  // the updater on builds with no Squirrel runtime to apply the result.
+  if (!isMac && !isSquirrelInstall) return null;
   const override = process.env["CELERY_UPDATE_FEED_URL"]?.trim();
   if (override) return override;
-  return `https://update.electronjs.org/sylophi/celery/darwin-${process.arch}/${app.getVersion()}`;
+  return `https://update.electronjs.org/${REPO_SLUG}/${platformId}-${process.arch}/${app.getVersion()}`;
 }
 
 export function checkForUpdates(): void {
@@ -93,10 +99,13 @@ export function startUpdater(): void {
     if (state.kind !== "ready") setState({ kind: "idle" });
   });
   autoUpdater.on("update-downloaded", (_event, _notes, releaseName) => {
-    const version = releaseName?.startsWith("v")
-      ? releaseName.slice(1)
-      : (releaseName ?? "");
-    setState({ kind: "ready", version });
+    // macOS reports the release name ("v0.1.0"), Windows the bare
+    // version from RELEASES. It's the one per-platform argument the
+    // docs don't guarantee, hence the absent fallback.
+    setState({
+      kind: "ready",
+      version: releaseName?.replace(/^v/, "") || undefined,
+    });
   });
   autoUpdater.on("error", (err) => {
     setState({

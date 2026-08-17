@@ -138,8 +138,8 @@ function UpdatesRow() {
         <span className="text-xs text-muted-foreground">updates</span>
         {state?.kind === "unsupported" && (
           <p className="text-[10px] leading-tight text-muted-foreground/60">
-            auto-update needs the installed macOS build; portable and dev builds
-            update by downloading a new release
+            auto-update needs an installed build (macOS app or Windows setup).
+            portable and dev builds update by downloading a new release
           </p>
         )}
         {state?.kind === "error" && (
@@ -153,7 +153,7 @@ function UpdatesRow() {
       </div>
       {state?.kind === "ready" ? (
         <Button size="xs" onClick={() => void window.api.updater.install()}>
-          restart to update to v{state.version}
+          restart to update{state.version ? ` to v${state.version}` : null}
         </Button>
       ) : state?.kind === "unsupported" ? null : (
         <Button

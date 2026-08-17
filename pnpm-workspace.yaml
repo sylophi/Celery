@@ -21,6 +21,10 @@ trustPolicyIgnoreAfter: 525600
 # Per-package build-script trust (ignore-scripts stays on globally).
 allowBuilds:
   electron: true
+  # Official @electron package (via maker-squirrel). Its install script
+  # only selects the bundled 7z binary for the host arch, which the
+  # Squirrel make step needs.
+  electron-winstaller: true
   esbuild: true
   lefthook: true
 # Transitive CVE floors inherited from shigomori (same forge toolchain).
