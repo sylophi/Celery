@@ -4,23 +4,35 @@ import { readThemeSync } from "./lib/config";
 import { registerIpcHandlers } from "./ipc";
 import { attachContextMenu } from "./electron/contextMenu";
 import { startUpdater } from "./electron/updater";
+import {
+  handleSquirrelStartup,
+  isSquirrelInstall,
+  squirrelAppUserModelId,
+} from "./electron/squirrel";
 import { ensureCeleryRoot, initCeleryRoot } from "./lib/util/paths";
 import { isMac, isWindows } from "./lib/util/platform";
+import { APP_BUNDLE_ID } from "@shared/app";
 import {
   CHROME_COLORS,
   TOOLBAR_HEIGHT,
   TRAFFIC_LIGHT_POSITION,
 } from "@shared/chrome";
 
+// Squirrel's installer relaunches the app to let it manage its own
+// shortcuts. squirrel.ts runs Update.exe and quits when it finishes.
+// The flag gates all normal startup below.
+const squirrelEventLaunch = handleSquirrelStartup();
+
 // A stable explicit AppUserModelID keeps taskbar grouping and pins
 // working for the portable Windows build (the default AUMID is derived
 // from the exe path, so moving the unzipped folder would orphan pins).
+// Squirrel installs must instead match the AUMID Update.exe stamps on
+// the shortcuts it creates, or pinned icons stop grouping.
 if (isWindows) {
-  app.setAppUserModelId("com.sylophi.celery");
+  app.setAppUserModelId(
+    isSquirrelInstall ? squirrelAppUserModelId : APP_BUNDLE_ID,
+  );
 }
-
-initCeleryRoot(app.isPackaged);
-registerIpcHandlers();
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -93,25 +105,32 @@ const createWindow = () => {
   attachContextMenu(mainWindow);
 };
 
-// The window's own background is what shows during a resize, before the
-// renderer repaints, so it has to follow the theme too.
-nativeTheme.on("updated", () => {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  const { backgroundColor, overlay } = chromeColors();
-  mainWindow.setBackgroundColor(backgroundColor);
-  if (isWindows) mainWindow.setTitleBarOverlay?.(overlay);
-});
+// Squirrel event launches exist only to run Update.exe and quit
+// (squirrel.ts owns that quit), so skip all normal startup.
+if (!squirrelEventLaunch) {
+  initCeleryRoot(app.isPackaged);
+  registerIpcHandlers();
 
-app.on("ready", async () => {
-  await ensureCeleryRoot();
-  createWindow();
-  startUpdater();
-});
+  // The window's own background is what shows during a resize, before
+  // the renderer repaints, so it has to follow the theme too.
+  nativeTheme.on("updated", () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    const { backgroundColor, overlay } = chromeColors();
+    mainWindow.setBackgroundColor(backgroundColor);
+    if (isWindows) mainWindow.setTitleBarOverlay?.(overlay);
+  });
 
-app.on("window-all-closed", () => {
-  app.quit();
-});
+  app.on("ready", async () => {
+    await ensureCeleryRoot();
+    createWindow();
+    startUpdater();
+  });
 
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
+  app.on("window-all-closed", () => {
+    app.quit();
+  });
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+}

@@ -149,7 +149,9 @@ jobs:
 
       # Unsigned: Windows builds ship without Authenticode until a
       # certificate exists (SmartScreen will warn on first run). The
-      # postMake hook renames the artifact to *-experimental.zip.
+      # postMake hook renames the portable zip to *-experimental.zip,
+      # the Squirrel setup exe carries the caveat in its own configured
+      # name, and RELEASES/.nupkg keep canonical names for the updater.
       - name: Build distributables
         run: pnpm exec electron-forge publish --dry-run
 
