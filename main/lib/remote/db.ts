@@ -7,6 +7,7 @@ import { fetchCached } from "./cache";
 //   everest_update.yaml      name -> version/hashes/download (~1.3MB)
 //   mod_dependency_graph.yaml  name -> its own dependencies  (~3MB)
 //   mod_ids_to_categories.json name -> GameBanana category   (~150KB)
+//   gb                         name -> GameBanana page (302 redirect)
 //   gamebanana-info            per-mod rich metadata (JSON)
 // The server refreshes from GameBanana roughly every half hour; TTLs
 // match so we never poll faster than the data can change. Parsed forms
@@ -17,14 +18,18 @@ const BASE = "https://maddie480.ovh/celeste";
 const UPDATE_DB_TTL = 30 * 60 * 1000;
 const SIDE_DB_TTL = 6 * 60 * 60 * 1000;
 const INFO_TTL = 6 * 60 * 60 * 1000;
+// Which GameBanana page a mod lives on never changes, so this one is
+// cached for a week: it is a lookup per installed mod, and the answer
+// is the same every time.
+const PAGE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 export const UpdateEntrySchema = z.object({
   Version: z.coerce.string(),
   LastUpdate: z.number(),
   Size: z.number(),
-  GameBananaType: z.string(),
-  GameBananaId: z.number(),
-  GameBananaFileId: z.number(),
+  // Digits only: this reaches a filesystem path for the partial
+  // download as well as a URL, so nothing path-shaped may get through.
+  GameBananaFileId: z.coerce.string().regex(/^\d+$/),
   xxHash: z.array(z.string()),
   URL: z.string(),
 });
@@ -133,6 +138,38 @@ const InfoResponseSchema = z.object({
   UpdatedDate: z.number().default(0),
 });
 
+// GameBanana's own page sections, as they appear in a page URL, mapped
+// to the item type the info endpoint names them by.
+const PAGE_TYPES: Record<string, string> = {
+  mods: "Mod",
+  tools: "Tool",
+  wips: "Wip",
+};
+
+export type ModPage = { type: string; id: number };
+
+// Which GameBanana page an everest.yaml Name belongs to. The update
+// database used to carry this outright; it now identifies only the
+// file, so the page comes from the redirect service, whose whole job
+// is turning a mod name into its page URL.
+export async function modPage(name: string): Promise<ModPage | null> {
+  const location = await fetchCached(
+    // base64url so that a mod name — which may hold anything at all,
+    // slashes and dots included — can only ever name one flat file.
+    `page/${Buffer.from(name, "utf8").toString("base64url")}`,
+    `${BASE}/gb?id=${encodeURIComponent(name)}`,
+    PAGE_TTL,
+    "location",
+  );
+  if (!location) return null;
+  const match = /^https:\/\/gamebanana\.com\/([a-z]+)\/(\d+)$/.exec(
+    location.toString("utf8"),
+  );
+  const type = match ? PAGE_TYPES[match[1]!] : undefined;
+  if (!match || type === undefined) return null;
+  return { type, id: Number(match[2]) };
+}
+
 export async function modInfo(
   gameBananaType: string,
   gameBananaId: number,
@@ -143,7 +180,7 @@ export async function modInfo(
   }
   const body = await fetchCached(
     `info/${gameBananaType}-${gameBananaId}.json`,
-    `${BASE}/gamebanana-info?itemtype=${gameBananaType}&itemid=${gameBananaId}`,
+    `${BASE}/gamebanana-info?id=GameBanana/${gameBananaType}/${gameBananaId}`,
     INFO_TTL,
   );
   if (!body) return null;

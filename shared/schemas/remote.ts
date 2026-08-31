@@ -12,8 +12,6 @@ export const RemoteFileStatusSchema = z.object({
   // The everest.yaml Name that matched the update database (a zip can
   // declare several entries; the first one present in the db wins).
   name: z.string(),
-  gameBananaId: z.number(),
-  gameBananaType: z.string(),
   category: z.string().optional(),
   latestVersion: z.string(),
   latestSizeBytes: z.number(),
@@ -58,7 +56,6 @@ export const InstallStepSchema = z.object({
   installable: z.boolean(),
   version: z.string().optional(),
   sizeBytes: z.number().optional(),
-  gameBananaId: z.number().optional(),
 });
 export type InstallStep = z.infer<typeof InstallStepSchema>;
 
