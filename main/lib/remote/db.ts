@@ -18,9 +18,10 @@ const BASE = "https://maddie480.ovh/celeste";
 const UPDATE_DB_TTL = 30 * 60 * 1000;
 const SIDE_DB_TTL = 6 * 60 * 60 * 1000;
 const INFO_TTL = 6 * 60 * 60 * 1000;
-// Which GameBanana page a mod lives on never changes, so this one is
-// cached for a week: it is a lookup per installed mod, and the answer
-// is the same every time.
+// Which GameBanana page a mod lives on almost never changes (a WiP
+// resubmitted as a mod is about the only way), so this one is cached
+// for a week: it is a lookup per installed mod, and a stale answer
+// costs at most a few days of the old page.
 const PAGE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 export const UpdateEntrySchema = z.object({
@@ -150,42 +151,50 @@ const PAGE_URL = /^https:\/\/gamebanana\.com\/([a-z]+)\/(\d+)$/;
 
 export type ModPage = { type: string; id: number };
 
+function parsePage(url: string): ModPage | null {
+  const match = PAGE_URL.exec(url);
+  if (!match) return null;
+  const type = PAGE_TYPES[match[1]];
+  return type === undefined ? null : { type, id: Number(match[2]) };
+}
+
 // The redirect service answers with the page in a Location header and
-// no body at all, so that header is the thing worth caching.
+// no body at all, so that header is the thing worth caching, but only
+// once it reads as a GameBanana page. Whatever else a network can put
+// in front of us (a captive portal, a proxy, an upstream that moved)
+// would otherwise sit in the cache for a week, looking exactly like a
+// mod that simply has no page.
 async function locationHeader(response: Response): Promise<Buffer> {
   const location = response.headers.get("location");
-  if (location !== null) return Buffer.from(location, "utf8");
+  if (location !== null && parsePage(location)) {
+    return Buffer.from(location, "utf8");
+  }
   // A name the service doesn't know answers 404 with a whole HTML
-  // page; nothing here is worth keeping or reading.
-  void response.body?.cancel();
+  // page. Nothing here is worth keeping or reading.
+  void response.body?.cancel().catch(() => {});
+  if (location !== null) {
+    // Every mod resolves through this one shape, so a change to it
+    // empties the whole app of remote data. Say so: the last time
+    // upstream moved, the only symptom was silently blank tiles.
+    console.warn(`Celery: unrecognised GameBanana page redirect: ${location}`);
+  }
   throw new Error(`HTTP ${response.status}`);
 }
 
 // Which GameBanana page an everest.yaml Name belongs to. The update
-// database used to carry this outright; it now identifies only the
+// database used to carry this outright. It now identifies only the
 // file, so the page comes from the redirect service, whose whole job
 // is turning a mod name into its page URL.
 export async function modPage(name: string): Promise<ModPage | null> {
   const location = await fetchCached(
-    // base64url so that a mod name — which may hold anything at all,
-    // slashes and dots included — can only ever name one flat file.
+    // base64url so that a mod name, which may hold anything at all
+    // including slashes and dots, can only ever name one flat file.
     `page/${Buffer.from(name, "utf8").toString("base64url")}`,
     `${BASE}/gb?id=${encodeURIComponent(name)}`,
     PAGE_TTL,
     { init: { redirect: "manual" }, bytes: locationHeader },
   );
-  if (!location) return null;
-  const url = location.toString("utf8");
-  const match = PAGE_URL.exec(url);
-  if (match) {
-    const type = PAGE_TYPES[match[1]];
-    if (type !== undefined) return { type, id: Number(match[2]) };
-  }
-  // Every mod resolves through this one shape, so a change to it empties
-  // the whole app of remote data. Say so: the last time upstream moved,
-  // the only symptom was silently blank tiles.
-  console.warn(`Celery: unrecognised GameBanana page URL for ${name}: ${url}`);
-  return null;
+  return location ? parsePage(location.toString("utf8")) : null;
 }
 
 export async function modInfo({

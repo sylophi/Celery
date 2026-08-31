@@ -83,9 +83,9 @@ export const remoteHandlers: Handlers<typeof remoteContract, HandlerContext> = {
 
   modInfo: async ({ name }) => {
     // Only a mod the update database knows has a GameBanana page to
-    // find, and the grid asks about every zip in the folder — so
-    // without this gate every local or in-progress mod spends a round
-    // trip on a lookup that can only 404, once per app run.
+    // find, and the grid asks about every zip in the folder. Without
+    // this gate every local or in-progress mod spends a round trip on
+    // a lookup that can only 404, once per app run.
     const db = await updateDb();
     if (!db?.has(name)) return null;
     const page = await modPage(name);

@@ -83,10 +83,10 @@ async function readBody(
 }
 
 // How a request is made and what of its response is worth keeping.
-// The default is the whole body, which is what every bulk file wants;
-// a caller after something else — a header, say — brings its own
-// `bytes` alongside whatever `init` that needs, so this module stays
-// out of the business of what any particular endpoint means.
+// The default is the whole body, which is what every bulk file wants.
+// A caller after something else, a header say, brings its own `bytes`
+// alongside whatever `init` that needs, so this module stays out of
+// the business of what any particular endpoint means.
 export type Fetching = {
   init?: RequestInit;
   bytes?: (response: Response) => Promise<Buffer>;
