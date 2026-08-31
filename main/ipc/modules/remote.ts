@@ -16,6 +16,7 @@ import {
   categories,
   depGraph,
   modInfo as fetchModInfo,
+  modPage,
   updateDb,
 } from "../../lib/remote/db";
 import {
@@ -65,8 +66,6 @@ export const remoteHandlers: Handlers<typeof remoteContract, HandlerContext> = {
       const dbEntry = db.get(entry.name)!;
       byFile[file.fileName] = {
         name: entry.name,
-        gameBananaId: dbEntry.GameBananaId,
-        gameBananaType: dbEntry.GameBananaType,
         ...(cats?.[entry.name] !== undefined
           ? { category: cats[entry.name]! }
           : {}),
@@ -83,10 +82,15 @@ export const remoteHandlers: Handlers<typeof remoteContract, HandlerContext> = {
   },
 
   modInfo: async ({ name }) => {
+    // Only a mod the update database knows has a GameBanana page to
+    // find, and the grid asks about every zip in the folder. Without
+    // this gate every local or in-progress mod spends a round trip on
+    // a lookup that can only 404, once per app run.
     const db = await updateDb();
-    const entry = db?.get(name);
-    if (!entry) return null;
-    return fetchModInfo(entry.GameBananaType, entry.GameBananaId);
+    if (!db?.has(name)) return null;
+    const page = await modPage(name);
+    if (!page) return null;
+    return fetchModInfo(page);
   },
 
   resolveMissing: async ({ names }) => {
@@ -112,13 +116,7 @@ export const remoteHandlers: Handlers<typeof remoteContract, HandlerContext> = {
       steps.push({
         name,
         installable: entry !== undefined,
-        ...(entry
-          ? {
-              version: entry.Version,
-              sizeBytes: entry.Size,
-              gameBananaId: entry.GameBananaId,
-            }
-          : {}),
+        ...(entry ? { version: entry.Version, sizeBytes: entry.Size } : {}),
       });
       // Walk the remote dependency graph so deps-of-deps that are also
       // missing locally land in the same plan.

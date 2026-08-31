@@ -7,6 +7,7 @@ import { fetchCached } from "./cache";
 //   everest_update.yaml      name -> version/hashes/download (~1.3MB)
 //   mod_dependency_graph.yaml  name -> its own dependencies  (~3MB)
 //   mod_ids_to_categories.json name -> GameBanana category   (~150KB)
+//   gb                         name -> GameBanana page (302 redirect)
 //   gamebanana-info            per-mod rich metadata (JSON)
 // The server refreshes from GameBanana roughly every half hour; TTLs
 // match so we never poll faster than the data can change. Parsed forms
@@ -17,14 +18,19 @@ const BASE = "https://maddie480.ovh/celeste";
 const UPDATE_DB_TTL = 30 * 60 * 1000;
 const SIDE_DB_TTL = 6 * 60 * 60 * 1000;
 const INFO_TTL = 6 * 60 * 60 * 1000;
+// Which GameBanana page a mod lives on almost never changes (a WiP
+// resubmitted as a mod is about the only way), so this one is cached
+// for a week: it is a lookup per installed mod, and a stale answer
+// costs at most a few days of the old page.
+const PAGE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 export const UpdateEntrySchema = z.object({
   Version: z.coerce.string(),
   LastUpdate: z.number(),
   Size: z.number(),
-  GameBananaType: z.string(),
-  GameBananaId: z.number(),
-  GameBananaFileId: z.number(),
+  // Digits only: this reaches a filesystem path for the partial
+  // download as well as a URL, so nothing path-shaped may get through.
+  GameBananaFileId: z.coerce.string().regex(/^\d+$/),
   xxHash: z.array(z.string()),
   URL: z.string(),
 });
@@ -133,17 +139,75 @@ const InfoResponseSchema = z.object({
   UpdatedDate: z.number().default(0),
 });
 
-export async function modInfo(
-  gameBananaType: string,
-  gameBananaId: number,
-): Promise<RemoteModInfo | null> {
-  // Type/id feed a filename and a URL; keep them strictly boring.
-  if (!/^[A-Za-z]+$/.test(gameBananaType) || !Number.isInteger(gameBananaId)) {
-    return null;
+// GameBanana's own page sections, as they appear in a page URL, mapped
+// to the item type the info endpoint names them by.
+const PAGE_TYPES: Record<string, string> = {
+  mods: "Mod",
+  tools: "Tool",
+  wips: "Wip",
+};
+
+const PAGE_URL = /^https:\/\/gamebanana\.com\/([a-z]+)\/(\d+)$/;
+
+export type ModPage = { type: string; id: number };
+
+function parsePage(url: string): ModPage | null {
+  const match = PAGE_URL.exec(url);
+  if (!match) return null;
+  const type = PAGE_TYPES[match[1]];
+  return type === undefined ? null : { type, id: Number(match[2]) };
+}
+
+// The redirect service answers with the page in a Location header and
+// no body at all, so that header is the thing worth caching, but only
+// once it reads as a GameBanana page. Whatever else a network can put
+// in front of us (a captive portal, a proxy, an upstream that moved)
+// would otherwise sit in the cache for a week, looking exactly like a
+// mod that simply has no page.
+async function locationHeader(response: Response): Promise<Buffer> {
+  const location = response.headers.get("location");
+  if (location !== null && parsePage(location)) {
+    return Buffer.from(location, "utf8");
   }
+  // A name the service doesn't know answers 404 with a whole HTML
+  // page. Nothing here is worth keeping or reading.
+  void response.body?.cancel().catch(() => {});
+  if (location !== null) {
+    // Every mod resolves through this one shape, so a change to it
+    // empties the whole app of remote data. Say so: the last time
+    // upstream moved, the only symptom was silently blank tiles.
+    console.warn(`Celery: unrecognised GameBanana page redirect: ${location}`);
+  }
+  throw new Error(`HTTP ${response.status}`);
+}
+
+// Which GameBanana page an everest.yaml Name belongs to. The update
+// database used to carry this outright. It now identifies only the
+// file, so the page comes from the redirect service, whose whole job
+// is turning a mod name into its page URL.
+export async function modPage(name: string): Promise<ModPage | null> {
+  const location = await fetchCached(
+    // base64url so that a mod name, which may hold anything at all
+    // including slashes and dots, can only ever name one flat file.
+    `page/${Buffer.from(name, "utf8").toString("base64url")}`,
+    `${BASE}/gb?id=${encodeURIComponent(name)}`,
+    PAGE_TTL,
+    { init: { redirect: "manual" }, bytes: locationHeader },
+  );
+  return location ? parsePage(location.toString("utf8")) : null;
+}
+
+export async function modInfo({
+  type,
+  id,
+}: ModPage): Promise<RemoteModInfo | null> {
+  // Belt and braces: modPage only ever yields a mapped type and a
+  // digits-only id, but these reach a filesystem path as well as a
+  // URL, so nothing else gets to.
+  if (!/^[A-Za-z]+$/.test(type) || !Number.isInteger(id)) return null;
   const body = await fetchCached(
-    `info/${gameBananaType}-${gameBananaId}.json`,
-    `${BASE}/gamebanana-info?itemtype=${gameBananaType}&itemid=${gameBananaId}`,
+    `info/${type}-${id}.json`,
+    `${BASE}/gamebanana-info?id=GameBanana/${type}/${id}`,
     INFO_TTL,
   );
   if (!body) return null;
