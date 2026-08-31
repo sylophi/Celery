@@ -5,9 +5,9 @@ import { z } from "zod";
 // best-effort: the app must stay fully usable when offline, so remote
 // lookups degrade to "unknown" rather than erroring.
 
-// Per installed file: how it maps onto GameBanana and whether the
-// database has a newer build than the local zip (Everest semantics:
-// the local hash is absent from the database entry's hash list).
+// Per installed file: what the database knows about it, and whether it
+// has a newer build than the local zip (Everest semantics: the local
+// hash is absent from the database entry's hash list).
 export const RemoteFileStatusSchema = z.object({
   // The everest.yaml Name that matched the update database (a zip can
   // declare several entries; the first one present in the db wins).

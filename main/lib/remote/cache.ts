@@ -82,11 +82,15 @@ async function readBody(
   }
 }
 
-// What of the response is worth keeping. "body" is the usual case;
-// "location" is for the redirect service that resolves a mod name to
-// its GameBanana page, where the answer is the Location header and a
-// 302 carries no body at all.
-export type CacheMode = "body" | "location";
+// How a request is made and what of its response is worth keeping.
+// The default is the whole body, which is what every bulk file wants;
+// a caller after something else — a header, say — brings its own
+// `bytes` alongside whatever `init` that needs, so this module stays
+// out of the business of what any particular endpoint means.
+export type Fetching = {
+  init?: RequestInit;
+  bytes?: (response: Response) => Promise<Buffer>;
+};
 
 // Fetch `url`, caching the body on disk under `key`. Within `ttlMs` the
 // cached copy is returned without network I/O. Past the TTL the server
@@ -97,7 +101,7 @@ export function fetchCached(
   key: string,
   url: string,
   ttlMs: number,
-  mode: CacheMode = "body",
+  fetching: Fetching = {},
 ): Promise<Buffer | null> {
   // One read or fetch per key at a time. The grid asks for per-mod info
   // for every tile that scrolls into view, and each of those consults
@@ -105,7 +109,7 @@ export function fetchCached(
   // read of it.
   const pending = inFlight.get(key);
   if (pending) return pending;
-  const run = fetchUncached(key, url, ttlMs, mode).finally(() =>
+  const run = fetchUncached(key, url, ttlMs, fetching).finally(() =>
     inFlight.delete(key),
   );
   inFlight.set(key, run);
@@ -114,16 +118,10 @@ export function fetchCached(
 
 const inFlight = new Map<string, Promise<Buffer | null>>();
 
-// The part of the response this key caches. Throwing here lands in the
-// caller's catch, which falls back to the stale copy.
-async function select(response: Response, mode: CacheMode): Promise<Buffer> {
-  if (mode === "location") {
-    const location = response.headers.get("location");
-    // A mod the redirect service doesn't know answers 404 with a page,
-    // not a Location; there is nothing to cache.
-    if (location === null) throw new Error(`HTTP ${response.status}`);
-    return Buffer.from(location, "utf8");
-  }
+// The default `bytes`: the whole body of a response that arrived.
+// Throwing here lands in the caller's catch, which falls back to the
+// stale copy.
+async function responseBody(response: Response): Promise<Buffer> {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return Buffer.from(await response.arrayBuffer());
 }
@@ -132,7 +130,7 @@ async function fetchUncached(
   key: string,
   url: string,
   ttlMs: number,
-  mode: CacheMode,
+  fetching: Fetching,
 ): Promise<Buffer | null> {
   const meta = await readMeta(key);
   if (meta && Date.now() - meta.fetchedAt < ttlMs) {
@@ -143,12 +141,9 @@ async function fetchUncached(
   if (meta?.etag) headers["If-None-Match"] = meta.etag;
   if (meta?.lastModified) headers["If-Modified-Since"] = meta.lastModified;
   try {
-    const response = await fetch(url, {
-      headers,
-      // A followed redirect would fetch the GameBanana page itself,
-      // which is both enormous and not the answer we came for.
-      ...(mode === "location" ? { redirect: "manual" as const } : {}),
-    });
+    // Revalidation headers last: they are this module's to set, and no
+    // caller's `init` has business replacing them.
+    const response = await fetch(url, { ...fetching.init, headers });
     if (response.status === 304 && meta) {
       const body = await readBody(key, meta.fetchedAt);
       if (body) {
@@ -158,7 +153,7 @@ async function fetchUncached(
         return body;
       }
     }
-    const body = await select(response, mode);
+    const body = await (fetching.bytes ?? responseBody)(response);
     const fetchedAt = Date.now();
     bodies.set(key, { fetchedAt, body });
     await writeEntry(key, body, {

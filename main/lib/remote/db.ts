@@ -146,7 +146,20 @@ const PAGE_TYPES: Record<string, string> = {
   wips: "Wip",
 };
 
+const PAGE_URL = /^https:\/\/gamebanana\.com\/([a-z]+)\/(\d+)$/;
+
 export type ModPage = { type: string; id: number };
+
+// The redirect service answers with the page in a Location header and
+// no body at all, so that header is the thing worth caching.
+async function locationHeader(response: Response): Promise<Buffer> {
+  const location = response.headers.get("location");
+  if (location !== null) return Buffer.from(location, "utf8");
+  // A name the service doesn't know answers 404 with a whole HTML
+  // page; nothing here is worth keeping or reading.
+  void response.body?.cancel();
+  throw new Error(`HTTP ${response.status}`);
+}
 
 // Which GameBanana page an everest.yaml Name belongs to. The update
 // database used to carry this outright; it now identifies only the
@@ -159,28 +172,33 @@ export async function modPage(name: string): Promise<ModPage | null> {
     `page/${Buffer.from(name, "utf8").toString("base64url")}`,
     `${BASE}/gb?id=${encodeURIComponent(name)}`,
     PAGE_TTL,
-    "location",
+    { init: { redirect: "manual" }, bytes: locationHeader },
   );
   if (!location) return null;
-  const match = /^https:\/\/gamebanana\.com\/([a-z]+)\/(\d+)$/.exec(
-    location.toString("utf8"),
-  );
-  const type = match ? PAGE_TYPES[match[1]!] : undefined;
-  if (!match || type === undefined) return null;
-  return { type, id: Number(match[2]) };
+  const url = location.toString("utf8");
+  const match = PAGE_URL.exec(url);
+  if (match) {
+    const type = PAGE_TYPES[match[1]];
+    if (type !== undefined) return { type, id: Number(match[2]) };
+  }
+  // Every mod resolves through this one shape, so a change to it empties
+  // the whole app of remote data. Say so: the last time upstream moved,
+  // the only symptom was silently blank tiles.
+  console.warn(`Celery: unrecognised GameBanana page URL for ${name}: ${url}`);
+  return null;
 }
 
-export async function modInfo(
-  gameBananaType: string,
-  gameBananaId: number,
-): Promise<RemoteModInfo | null> {
-  // Type/id feed a filename and a URL; keep them strictly boring.
-  if (!/^[A-Za-z]+$/.test(gameBananaType) || !Number.isInteger(gameBananaId)) {
-    return null;
-  }
+export async function modInfo({
+  type,
+  id,
+}: ModPage): Promise<RemoteModInfo | null> {
+  // Belt and braces: modPage only ever yields a mapped type and a
+  // digits-only id, but these reach a filesystem path as well as a
+  // URL, so nothing else gets to.
+  if (!/^[A-Za-z]+$/.test(type) || !Number.isInteger(id)) return null;
   const body = await fetchCached(
-    `info/${gameBananaType}-${gameBananaId}.json`,
-    `${BASE}/gamebanana-info?id=GameBanana/${gameBananaType}/${gameBananaId}`,
+    `info/${type}-${id}.json`,
+    `${BASE}/gamebanana-info?id=GameBanana/${type}/${id}`,
     INFO_TTL,
   );
   if (!body) return null;
